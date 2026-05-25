@@ -1,19 +1,114 @@
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"fmt"
+
+	"github.com/roboalchemist/tagents/pkg/output"
+	"github.com/roboalchemist/tagents/pkg/runtime"
+	"github.com/spf13/cobra"
+)
 
 var statusCmd = &cobra.Command{
-	Use:     "status",
-	Short:   "Fleet summary counts",
-	Long:    `Display fleet summary counts: total, busy, idle, dead agents.`,
+	Use:   "status",
+	Short: "Fleet status summary",
+	Long: `Show fleet summary counts: total, busy, idle, dead.
+
+Counts are per-machine when multi-machine scope is used.
+
+Examples:
+  tagents status
+  tagents status --json
+  tagents status --all-machines`,
 	Example: `  tagents status
-  tagents status --json`,
+  tagents status --json
+  tagents status --all-machines --json`,
 	RunE: runStatus,
 }
 
 func init() { rootCmd.AddCommand(statusCmd) }
 
+type machineStatus struct {
+	Total int `json:"total"`
+	Busy  int `json:"busy"`
+	Idle  int `json:"idle"`
+	Dead  int `json:"dead"`
+}
+
+type fleetStatus struct {
+	Overall  machineStatus            `json:"overall"`
+	Machines map[string]machineStatus `json:"machines,omitempty"`
+}
+
 func runStatus(cmd *cobra.Command, args []string) error {
-	// TODO: implement in TAGENTS-8
+	opts := GetOutputOptions()
+	machine, allMachines := GetMachineScope()
+
+	sessions, err := getSessions(machine, allMachines)
+	if err != nil {
+		return err
+	}
+
+	byMachine := make(map[string]*machineStatus)
+	overall := &machineStatus{}
+
+	for _, s := range sessions {
+		m := s.Machine
+		if m == "" {
+			m = "local"
+		}
+		if byMachine[m] == nil {
+			byMachine[m] = &machineStatus{}
+		}
+		ms := byMachine[m]
+		ms.Total++
+		overall.Total++
+		switch s.Status {
+		case runtime.Busy:
+			ms.Busy++
+			overall.Busy++
+		case runtime.Idle:
+			ms.Idle++
+			overall.Idle++
+		case runtime.Dead:
+			ms.Dead++
+			overall.Dead++
+		}
+	}
+
+	fleet := fleetStatus{Overall: *overall}
+	if allMachines || machine != "" {
+		fleet.Machines = make(map[string]machineStatus)
+		for k, v := range byMachine {
+			fleet.Machines[k] = *v
+		}
+	}
+
+	if opts.Mode == output.ModeJSON {
+		return output.RenderJSON(fleet, opts)
+	}
+
+	// Human-readable output
+	fmt.Printf("Fleet: %d total  %d busy  %d idle  %d dead\n",
+		overall.Total, overall.Busy, overall.Idle, overall.Dead)
+
+	if len(byMachine) > 1 {
+		fmt.Println()
+		headers := []string{"MACHINE", "TOTAL", "BUSY", "IDLE", "DEAD"}
+		var rows [][]string
+		for name, ms := range byMachine {
+			rows = append(rows, []string{
+				name,
+				fmt.Sprint(ms.Total),
+				fmt.Sprint(ms.Busy),
+				fmt.Sprint(ms.Idle),
+				fmt.Sprint(ms.Dead),
+			})
+		}
+		if opts.Mode == output.ModePlaintext {
+			return output.RenderPlaintext(headers, rows, opts)
+		}
+		return output.RenderTable(headers, rows, opts)
+	}
+
 	return nil
 }
