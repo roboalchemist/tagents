@@ -62,7 +62,6 @@ gpu-box             yes        11
 nuc1                yes        3
 iris                yes        32
 example-host                no         0
-...
 ```
 
 ## Machine Scope
@@ -120,3 +119,5 @@ Full flag reference: [skill/reference/commands.md](reference/commands.md)
 ## FILES
 
 `~/.ssh/config` — source of machine discovery (Host entries, Include directives supported)
+
+Full configuration reference: [docs/config.md](../docs/config.md)

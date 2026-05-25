@@ -91,6 +91,10 @@ All commands accept:
 | `--machine <host>` | | Target specific SSH host |
 | `--all-machines` | | Target all SSH hosts |
 
+## Configuration
+
+tagents reads `~/.ssh/config` for machine discovery. See [docs/config.md](docs/config.md) for full configuration reference.
+
 ## Shell Completions
 
 ```bash
