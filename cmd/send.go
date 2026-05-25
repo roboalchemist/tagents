@@ -10,6 +10,7 @@ import (
 )
 
 var flagSendForce bool
+var flagSendDryRun bool
 
 var sendCmd = &cobra.Command{
 	Use:   "send <agent> <message>",
@@ -24,18 +25,25 @@ Examples:
   tagents send gateway:worker "stop and report"`,
 	Example: `  tagents send my-agent "please continue"
   tagents send my-agent "check status" --force`,
-	Args: cobra.ExactArgs(2),
-	RunE: runSend,
+	SuggestFor: []string{"msg", "message"},
+	Args:       cobra.ExactArgs(2),
+	RunE:       runSend,
 }
 
 func init() {
 	sendCmd.Flags().BoolVarP(&flagSendForce, "force", "f", false, "Send even if agent is busy")
+	sendCmd.Flags().BoolVar(&flagSendDryRun, "dry-run", false, "Print what would be sent without sending")
 	rootCmd.AddCommand(sendCmd)
 }
 
 func runSend(cmd *cobra.Command, args []string) error {
 	query := args[0]
 	message := args[1]
+
+	if flagSendDryRun {
+		fmt.Fprintf(os.Stderr, "[dry-run] Would send to %s: %s\n", query, message)
+		return nil
+	}
 
 	s, err := findSession(query)
 	if err != nil {

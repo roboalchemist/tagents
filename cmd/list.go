@@ -25,7 +25,8 @@ Examples:
 	Example: `  tagents list
   tagents list --json | jq '.[0]'
   tagents list --all-machines --plaintext`,
-	RunE: runList,
+	SuggestFor: []string{"ls", "ps"},
+	RunE:       runList,
 }
 
 func init() { rootCmd.AddCommand(listCmd) }

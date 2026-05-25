@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var flagInjectDryRun bool
+
 var injectCmd = &cobra.Command{
 	Use:   "inject <agent> <file>",
 	Short: "Send @<file> to an agent",
@@ -24,7 +26,10 @@ Examples:
 	RunE: runInject,
 }
 
-func init() { rootCmd.AddCommand(injectCmd) }
+func init() {
+	injectCmd.Flags().BoolVar(&flagInjectDryRun, "dry-run", false, "Print what would be injected without sending")
+	rootCmd.AddCommand(injectCmd)
+}
 
 func runInject(cmd *cobra.Command, args []string) error {
 	query := args[0]
@@ -37,6 +42,11 @@ func runInject(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		filePath = home + filePath[1:]
+	}
+
+	if flagInjectDryRun {
+		fmt.Fprintf(os.Stderr, "[dry-run] Would inject %s to %s\n", filePath, query)
+		return nil
 	}
 
 	// Validate file exists
