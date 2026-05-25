@@ -26,7 +26,10 @@ test-unit:
 	go tool cover -func=coverage.out | grep total
 
 test-integration:
-	go test -v -timeout 120s -run TestIntegration ./...
+	go test -v -short -timeout 120s -run TestIntegration ./...
+
+test-integration-full:
+	go test -v -timeout 600s -run TestIntegration ./...
 
 install:
 	go build $(LDFLAGS) -o $(BINARY) . && sudo install -m 755 $(BINARY) /usr/local/bin/
