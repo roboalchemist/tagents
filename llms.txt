@@ -2,15 +2,62 @@
 
 > Go CLI for managing AI agent fleet across tmux sessions and SSH machines.
 
+No API keys. Uses tmux and SSH from PATH. Reads ~/.ssh/config for machine discovery.
+
 ## Commands
 
-- list: List all agent sessions
-- machines: List SSH-config machines
-- status: Fleet summary counts
-- read: Read agent tmux pane output
-- log: Read agent session log
-- where: Get agent CWD
-- send: Send message to agent
-- broadcast: Send to all idle agents
-- wait: Wait for agent to go idle
-- inject: Send @file to agent
+- list [--machine <host>] [--all-machines]: List all agent sessions (name, runtime, status, cwd, preview)
+- machines: List SSH-config machines with reachability and agent count
+- status [--machine <host>] [--all-machines]: Fleet summary counts (total/busy/idle/dead)
+- read <agent> [lines]: Last N lines of agent's tmux pane (default 50)
+- log <agent> [lines] [--raw]: Agent session transcript (Claude Code JSONL parsed, default 100 lines)
+- where <agent>: Agent's current working directory
+- send <agent> <message> [--force]: Send message to agent (warns if busy, --force to override)
+- broadcast <message> [--runtime claude|codex] [--dry-run]: Send to all idle agents
+- wait <agent> [timeout]: Block until agent is idle (default 60s; exit 1 on timeout)
+- inject <agent> <file>: Send @<file> to agent
+- skill print: Print bundled SKILL.md to stdout
+- skill add: Install skill to ~/.claude/skills/tagents/
+- docs: Display README.md
+- completion [bash|zsh|fish|powershell]: Generate shell completions
+
+## Global flags
+
+  --json, -j         JSON output
+  --plaintext, -p    Tab-separated
+  --no-color         Disable colors
+  --debug, --verbose Verbose stderr logging
+  --fields           Comma-separated field selection
+  --jq               JQ filter expression
+  --quiet, -q        Suppress non-error output
+  --machine          Target specific SSH host
+  --all-machines     Target all SSH hosts
+
+## Agent name formats
+
+  "sim-1"          Fuzzy match (substring: sim-1 matches oh-sim-1, sim-1-worker)
+  "gateway:sim-1"  Pinned machine:name match
+  "local:sim-1"    Explicitly local
+
+## Status values
+
+  idle   Waiting for input (green)
+  busy   Actively running (yellow)
+  dead   Pane missing or empty (red)
+
+## Runtimes detected
+
+  claude   Session name contains 'claude', or pane has Human:/Assistant: markers
+  codex    Session name contains 'codex'
+  unknown  Not detected
+
+## Exit codes
+
+  0  Success
+  1  Agent not found or operation failed
+  2  Usage error
+  3  System error (tmux/ssh unavailable)
+
+## Files
+
+  ~/.ssh/config   SSH machine discovery (Host entries, Include supported)
