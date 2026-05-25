@@ -9,9 +9,13 @@ import (
 var completionCmd = &cobra.Command{
 	Use:                   "completion [bash|zsh|fish|powershell]",
 	Short:                 "Generate shell completion scripts",
+	Long:                  `Generate shell completion scripts for tagents.`,
 	DisableFlagsInUseLine: true,
 	ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
 	Args:                  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	Example: `  tagents completion bash > /etc/bash_completion.d/tagents
+  tagents completion zsh > "${fpath[1]}/_tagents"
+  tagents completion fish > ~/.config/fish/completions/tagents.fish`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		switch args[0] {
 		case "bash":

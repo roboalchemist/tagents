@@ -5,12 +5,11 @@ import "github.com/spf13/cobra"
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all agent sessions",
-	Long: `List all agent sessions. Columns: machine (multi-scope), session name, runtime, status, cwd, preview.
-
-Examples:
-  tagents list
+	Long:  `List all agent sessions. Columns: machine (multi-scope), session name, runtime, status, cwd, preview.`,
+	Example: `  tagents list
   tagents list --json
-  tagents list --machine gateway`,
+  tagents list --machine gateway
+  tagents list --all-machines`,
 	RunE: runList,
 }
 

@@ -3,12 +3,10 @@ package cmd
 import "github.com/spf13/cobra"
 
 var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Fleet summary counts",
-	Long: `Display fleet summary counts: total, busy, idle, dead agents.
-
-Examples:
-  tagents status
+	Use:     "status",
+	Short:   "Fleet summary counts",
+	Long:    `Display fleet summary counts: total, busy, idle, dead agents.`,
+	Example: `  tagents status
   tagents status --json`,
 	RunE: runStatus,
 }
