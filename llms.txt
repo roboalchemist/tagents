@@ -1,0 +1,16 @@
+# tagents
+
+> Go CLI for managing AI agent fleet across tmux sessions and SSH machines.
+
+## Commands
+
+- list: List all agent sessions
+- machines: List SSH-config machines
+- status: Fleet summary counts
+- read: Read agent tmux pane output
+- log: Read agent session log
+- where: Get agent CWD
+- send: Send message to agent
+- broadcast: Send to all idle agents
+- wait: Wait for agent to go idle
+- inject: Send @file to agent
