@@ -143,7 +143,12 @@ func pruneFields(v interface{}, fields []string) interface{} {
 	for _, f := range fields {
 		fieldSet[strings.ToLower(f)] = true
 	}
+	return pruneFieldsResolved(v, fieldSet)
+}
 
+// pruneFieldsResolved prunes fields from a JSON-native or arbitrary struct value.
+// Arbitrary structs are round-tripped to JSON-native types exactly once.
+func pruneFieldsResolved(v interface{}, fieldSet map[string]bool) interface{} {
 	switch val := v.(type) {
 	case []map[string]interface{}:
 		result := make([]map[string]interface{}, len(val))
@@ -151,10 +156,21 @@ func pruneFields(v interface{}, fields []string) interface{} {
 			result[i] = pruneMap(m, fieldSet)
 		}
 		return result
+	case []interface{}:
+		// Slice of arbitrary values (e.g. after JSON unmarshal of []SomeStruct)
+		result := make([]interface{}, len(val))
+		for i, item := range val {
+			if m, ok := item.(map[string]interface{}); ok {
+				result[i] = pruneMap(m, fieldSet)
+			} else {
+				result[i] = item
+			}
+		}
+		return result
 	case map[string]interface{}:
 		return pruneMap(val, fieldSet)
 	default:
-		// For arbitrary structs, round-trip through JSON
+		// For arbitrary structs, round-trip through JSON once to get native types.
 		b, err := json.Marshal(v)
 		if err != nil {
 			return v
@@ -163,7 +179,8 @@ func pruneFields(v interface{}, fields []string) interface{} {
 		if err := json.Unmarshal(b, &m); err != nil {
 			return v
 		}
-		return pruneFields(m, fields)
+		// m is now a JSON-native type; recurse without risk of infinite loop.
+		return pruneFieldsResolved(m, fieldSet)
 	}
 }
 
