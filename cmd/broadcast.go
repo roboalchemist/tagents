@@ -5,10 +5,8 @@ import "github.com/spf13/cobra"
 var broadcastCmd = &cobra.Command{
 	Use:   "broadcast <message>",
 	Short: "Send a message to all idle agents",
-	Long: `Send a message to all idle agents across all discovered machines.
-
-Examples:
-  tagents broadcast "daily standup: what did you accomplish?"
+	Long:  `Send a message to all idle agents across all discovered machines.`,
+	Example: `  tagents broadcast "daily standup: what did you accomplish?"
   tagents broadcast --machine gateway "please wrap up"`,
 	Args: cobra.ExactArgs(1),
 	RunE: runBroadcast,

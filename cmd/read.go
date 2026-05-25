@@ -5,10 +5,8 @@ import "github.com/spf13/cobra"
 var readCmd = &cobra.Command{
 	Use:   "read <agent> [lines]",
 	Short: "Read last N lines of agent's tmux pane output",
-	Long: `Read the last N lines of an agent's tmux pane output (default 50).
-
-Examples:
-  tagents read myagent
+	Long:  `Read the last N lines of an agent's tmux pane output (default 50).`,
+	Example: `  tagents read myagent
   tagents read myagent 100
   tagents read gateway:myagent`,
 	Args: cobra.RangeArgs(1, 2),

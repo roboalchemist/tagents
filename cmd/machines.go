@@ -3,12 +3,10 @@ package cmd
 import "github.com/spf13/cobra"
 
 var machinesCmd = &cobra.Command{
-	Use:   "machines",
-	Short: "List SSH-config machines with reachability and agent count",
-	Long: `List all machines discovered from ~/.ssh/config, showing reachability and agent count.
-
-Examples:
-  tagents machines
+	Use:     "machines",
+	Short:   "List SSH-config machines with reachability and agent count",
+	Long:    `List all machines discovered from ~/.ssh/config, showing reachability and agent count.`,
+	Example: `  tagents machines
   tagents machines --json`,
 	RunE: runMachines,
 }

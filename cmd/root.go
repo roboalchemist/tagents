@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"github.com/roboalchemist/tagents/pkg/output"
 )
 
 var appVersion = "dev"
@@ -14,6 +16,8 @@ var (
 	flagPlaintext   bool
 	flagNoColor     bool
 	flagDebug       bool
+	flagVerbose     bool
+	flagQuiet       bool
 	flagFields      string
 	flagJQ          string
 	flagMachine     string
@@ -47,11 +51,15 @@ BUGS:
 }
 
 func init() {
+	rootCmd.SetVersionTemplate("{{.Name}} version {{.Version}}\n")
+
 	pf := rootCmd.PersistentFlags()
 	pf.BoolVarP(&flagJSON, "json", "j", false, "JSON output")
 	pf.BoolVarP(&flagPlaintext, "plaintext", "p", false, "Tab-separated output for piping")
 	pf.BoolVar(&flagNoColor, "no-color", false, "Disable colored output")
 	pf.BoolVar(&flagDebug, "debug", false, "Verbose logging to stderr")
+	pf.BoolVarP(&flagVerbose, "verbose", "v", false, "Verbose output (alias for --debug)")
+	pf.BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress non-error output")
 	pf.StringVar(&flagFields, "fields", "", "Comma-separated fields to include in output")
 	pf.StringVar(&flagJQ, "jq", "", "JQ expression to filter JSON output")
 	pf.StringVar(&flagMachine, "machine", "", "Target a specific SSH host")
@@ -62,6 +70,7 @@ func Execute() error {
 	return rootCmd.Execute()
 }
 
+// RootCmd returns the root cobra command (used by gendocs).
 func RootCmd() *cobra.Command {
 	return rootCmd
 }
@@ -71,8 +80,33 @@ func SetVersion(v string) {
 	rootCmd.Version = v
 }
 
+// DebugLog writes a debug message to stderr when --debug or --verbose is active.
 func DebugLog(format string, args ...interface{}) {
-	if flagDebug {
+	if flagDebug || flagVerbose {
 		fmt.Fprintf(os.Stderr, "[debug] "+format+"\n", args...)
 	}
+}
+
+// GetMachineScope returns the --machine and --all-machines flag values.
+func GetMachineScope() (machine string, allMachines bool) {
+	return flagMachine, flagAllMachines
+}
+
+// GetOutputOptions builds an output.Options from the current flag state.
+func GetOutputOptions() output.Options {
+	opts := output.Options{
+		NoColor: flagNoColor,
+		Debug:   flagDebug || flagVerbose,
+		Fields:  flagFields,
+		JQ:      flagJQ,
+	}
+	switch {
+	case flagJSON:
+		opts.Mode = output.ModeJSON
+	case flagPlaintext:
+		opts.Mode = output.ModePlaintext
+	default:
+		opts.Mode = output.ModeTable
+	}
+	return opts
 }
