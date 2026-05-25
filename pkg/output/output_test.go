@@ -256,3 +256,159 @@ func TestShouldUseColor_NoColorAndNoFlag(t *testing.T) {
 	// We just verify it doesn't panic and returns a bool
 	_ = result
 }
+
+func TestShouldUseColor_StdoutIsTTY(t *testing.T) {
+	// Redirect stdout to a real file (not TTY) — verify it returns false
+	// (We can't easily create a real TTY in tests; instead we verify the pipe path.)
+	t.Setenv("NO_COLOR", "")
+	old := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdout = w
+	opts := Options{NoColor: false}
+	result := opts.ShouldUseColor()
+	w.Close()
+	os.Stdout = old
+	r.Close()
+	// A pipe is not a char device, so result should be false
+	if result {
+		t.Error("expected ShouldUseColor to return false when stdout is a pipe")
+	}
+}
+
+func TestPruneFields_EmptyFields(t *testing.T) {
+	// pruneFields with empty fields should return value unchanged
+	data := map[string]interface{}{"name": "alice", "status": "idle"}
+	result := pruneFields(data, nil)
+	m, ok := result.(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected map[string]interface{}, got %T", result)
+	}
+	if _, ok := m["name"]; !ok {
+		t.Error("name field should be present when fields is empty")
+	}
+	if _, ok := m["status"]; !ok {
+		t.Error("status field should be present when fields is empty")
+	}
+}
+
+func TestPruneFields_SliceOfMap(t *testing.T) {
+	// pruneFieldsResolved with []map[string]interface{} path
+	data := []map[string]interface{}{
+		{"name": "alice", "machine": "gateway"},
+		{"name": "bob", "machine": "local"},
+	}
+	result := pruneFields(data, []string{"name"})
+	pruned, ok := result.([]map[string]interface{})
+	if !ok {
+		t.Fatalf("expected []map[string]interface{}, got %T", result)
+	}
+	if len(pruned) != 2 {
+		t.Fatalf("expected 2 items, got %d", len(pruned))
+	}
+	for i, m := range pruned {
+		if _, ok := m["machine"]; ok {
+			t.Errorf("item %d: machine field should have been pruned", i)
+		}
+		if _, ok := m["name"]; !ok {
+			t.Errorf("item %d: name field should be present", i)
+		}
+	}
+}
+
+func TestPruneFields_SliceOfStruct(t *testing.T) {
+	// Test round-trip through JSON for a slice of arbitrary structs
+	type fakeSession struct {
+		Name    string `json:"name"`
+		Status  string `json:"status"`
+		Machine string `json:"machine"`
+	}
+	data := []fakeSession{
+		{Name: "worker-1", Status: "idle", Machine: "local"},
+		{Name: "worker-2", Status: "busy", Machine: "gateway"},
+	}
+	opts := Options{Mode: ModeJSON, Fields: "name,status"}
+	out := captureStdout(t, func() {
+		_ = RenderJSON(data, opts)
+	})
+	if strings.Contains(out, "machine") {
+		t.Error("machine field should have been pruned from struct slice")
+	}
+	if !strings.Contains(out, "name") {
+		t.Error("name field should be present")
+	}
+	if !strings.Contains(out, "worker-1") {
+		t.Error("worker-1 should be present")
+	}
+}
+
+func TestPruneFields_SliceOfInterfaceWithNonMap(t *testing.T) {
+	// pruneFieldsResolved with []interface{} containing non-map items
+	data := []interface{}{
+		map[string]interface{}{"name": "alice", "extra": "prune-me"},
+		"plain-string-item", // non-map: should pass through unchanged
+		42,                  // non-map: should pass through unchanged
+	}
+	result := pruneFieldsResolved(data, map[string]bool{"name": true})
+	arr, ok := result.([]interface{})
+	if !ok {
+		t.Fatalf("expected []interface{}, got %T", result)
+	}
+	if len(arr) != 3 {
+		t.Fatalf("expected 3 items, got %d", len(arr))
+	}
+	// First item should be pruned map
+	m, ok := arr[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected map at index 0, got %T", arr[0])
+	}
+	if _, ok := m["extra"]; ok {
+		t.Error("extra field should have been pruned")
+	}
+	// Second item should be unchanged string
+	if arr[1] != "plain-string-item" {
+		t.Errorf("expected plain-string-item at index 1, got %v", arr[1])
+	}
+	// Third item should be unchanged int
+	if arr[2] != 42 {
+		t.Errorf("expected 42 at index 2, got %v", arr[2])
+	}
+}
+
+func TestPruneFields_SliceOfInterfaceWithMaps(t *testing.T) {
+	// pruneFieldsResolved via []interface{} (as returned by json.Unmarshal of []struct)
+	data := []interface{}{
+		map[string]interface{}{"name": "a", "extra": "prune-me"},
+		map[string]interface{}{"name": "b", "extra": "prune-me"},
+	}
+	result := pruneFieldsResolved(data, map[string]bool{"name": true})
+	arr, ok := result.([]interface{})
+	if !ok {
+		t.Fatalf("expected []interface{}, got %T", result)
+	}
+	for i, item := range arr {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			t.Fatalf("item %d: expected map, got %T", i, item)
+		}
+		if _, ok := m["extra"]; ok {
+			t.Errorf("item %d: extra field should be pruned", i)
+		}
+		if _, ok := m["name"]; !ok {
+			t.Errorf("item %d: name field should be present", i)
+		}
+	}
+}
+
+func TestApplyJQ_RuntimeError(t *testing.T) {
+	// JQ expression that causes a runtime error: iterating over a string
+	_, err := applyJQ([]byte(`"not-an-array"`), ".[]")
+	if err == nil {
+		t.Error("expected JQ runtime error when iterating over a string")
+	}
+	if !strings.Contains(err.Error(), "JQ error") {
+		t.Errorf("expected 'JQ error' in error message, got: %v", err)
+	}
+}
