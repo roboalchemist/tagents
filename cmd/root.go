@@ -41,10 +41,7 @@ EXIT STATUS:
   0  Success
   1  Agent not found or operation failed
   2  Usage error
-  3  System error (tmux/ssh unavailable)
-
-BUGS:
-  Report bugs to: https://github.com/roboalchemist/tagents/issues`,
+  3  System error (tmux/ssh unavailable)`,
 	Version:       appVersion,
 	SilenceUsage:  true,
 	SilenceErrors: true,
@@ -52,6 +49,16 @@ BUGS:
 
 func init() {
 	rootCmd.SetVersionTemplate("{{.Name}} version {{.Version}}\n")
+
+	// GNU standard: --help output must end with "Report bugs to:" URL.
+	// Cobra renders Long first (which contains BUGS), then appends Usage/Flags/Subcommands.
+	// Override the help template to move the BUGS section to the end.
+	rootCmd.SetHelpTemplate(`{{with .Long}}{{. | trimRightSpace}}
+
+{{end}}{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}
+BUGS:
+  Report bugs to: https://github.com/roboalchemist/tagents/issues
+`)
 
 	pf := rootCmd.PersistentFlags()
 	pf.BoolVarP(&flagJSON, "json", "j", false, "JSON output")
@@ -67,7 +74,13 @@ func init() {
 }
 
 func Execute() error {
-	return rootCmd.Execute()
+	err := rootCmd.Execute()
+	if err != nil {
+		// Emit structured error JSON to stderr when --json is active.
+		opts := GetOutputOptions()
+		output.RenderError(err.Error(), 1, opts)
+	}
+	return err
 }
 
 // RootCmd returns the root cobra command (used by gendocs).
