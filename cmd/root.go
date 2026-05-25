@@ -22,6 +22,7 @@ var (
 	flagJQ          string
 	flagMachine     string
 	flagAllMachines bool
+	flagVersionShort bool
 )
 
 var rootCmd = &cobra.Command{
@@ -33,32 +34,47 @@ and remote machines, reports status, sends messages, reads output, and tails log
 
 ENVIRONMENT:
   No API keys required. Uses tmux and SSH from your PATH.
+  NO_COLOR           Disable color output
 
 FILES:
-  ~/.ssh/config    SSH machine discovery
+  ~/.ssh/config (0600)  SSH machine discovery
 
 EXIT STATUS:
   0  Success
   1  Agent not found or operation failed
   2  Usage error
-  3  System error (tmux/ssh unavailable)`,
+  3  System error (tmux/ssh unavailable)
+
+BUGS:
+  Report bugs to: https://github.com/roboalchemist/tagents/issues`,
+	Example: `  tagents list
+  tagents status --json
+  tagents send my-agent "hello"`,
 	Version:       appVersion,
 	SilenceUsage:  true,
 	SilenceErrors: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if flagVersionShort {
+			fmt.Printf("tagents version %s\nCopyright (c) 2026 roboalchemist\n", appVersion)
+			return nil
+		}
+		return cmd.Help()
+	},
 }
 
 func init() {
-	rootCmd.SetVersionTemplate("{{.Name}} version {{.Version}}\n")
+	rootCmd.SetVersionTemplate("tagents version {{.Version}}\nCopyright (c) 2026 roboalchemist\n")
 
-	// GNU standard: --help output must end with "Report bugs to:" URL.
-	// Cobra renders Long first (which contains BUGS), then appends Usage/Flags/Subcommands.
-	// Override the help template to move the BUGS section to the end.
+	// GNU standard: --help output ends with homepage.
+	// Long already contains BUGS section (needed for man pages).
+	// Help template: Long → Usage → Homepage.
 	rootCmd.SetHelpTemplate(`{{with .Long}}{{. | trimRightSpace}}
 
-{{end}}{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}
-BUGS:
-  Report bugs to: https://github.com/roboalchemist/tagents/issues
+{{end}}{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}Homepage: https://github.com/roboalchemist/tagents
 `)
+
+	// -V shorthand for --version (capital V; -v is taken by --verbose)
+	rootCmd.Flags().BoolVarP(&flagVersionShort, "version-short", "V", false, "Print version and exit")
 
 	pf := rootCmd.PersistentFlags()
 	pf.BoolVarP(&flagJSON, "json", "j", false, "JSON output")
@@ -67,6 +83,7 @@ BUGS:
 	pf.BoolVar(&flagDebug, "debug", false, "Verbose logging to stderr")
 	pf.BoolVarP(&flagVerbose, "verbose", "v", false, "Verbose output (alias for --debug)")
 	pf.BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress non-error output")
+	pf.BoolVar(&flagQuiet, "silent", false, "Suppress non-error output (alias for --quiet)")
 	pf.StringVar(&flagFields, "fields", "", "Comma-separated fields to include in output")
 	pf.StringVar(&flagJQ, "jq", "", "JQ expression to filter JSON output")
 	pf.StringVar(&flagMachine, "machine", "", "Target a specific SSH host")

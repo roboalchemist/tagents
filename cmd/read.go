@@ -24,8 +24,9 @@ Examples:
   tagents read gateway:worker 50`,
 	Example: `  tagents read my-agent
   tagents read my-agent 100 --json`,
-	Args: cobra.RangeArgs(1, 2),
-	RunE: runRead,
+	SuggestFor: []string{"tail", "cat", "view"},
+	Args:       cobra.RangeArgs(1, 2),
+	RunE:       runRead,
 }
 
 func init() { rootCmd.AddCommand(readCmd) }

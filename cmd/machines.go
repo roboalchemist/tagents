@@ -23,7 +23,8 @@ Examples:
   tagents machines --json`,
 	Example: `  tagents machines
   tagents machines --json | jq '.[] | select(.reachable)'`,
-	RunE: runMachines,
+	SuggestFor: []string{"hosts", "nodes"},
+	RunE:       runMachines,
 }
 
 func init() { rootCmd.AddCommand(machinesCmd) }
