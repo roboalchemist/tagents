@@ -19,10 +19,10 @@ func captureStdout(t *testing.T, fn func()) string {
 	}
 	os.Stdout = w
 	fn()
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 	return buf.String()
 }
 
@@ -184,10 +184,10 @@ func TestRenderError_JSON(t *testing.T) {
 	os.Stderr = w
 	opts := Options{Mode: ModeJSON}
 	RenderError("bad input", 400, opts)
-	w.Close()
+	_ = w.Close()
 	os.Stderr = old
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+	_, _ = io.Copy(&buf, r)
 	out := buf.String()
 	if !strings.Contains(out, "bad input") {
 		t.Errorf("expected error message in JSON output: %s", out)

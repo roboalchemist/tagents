@@ -16,9 +16,6 @@ var readmeContents string
 //go:embed skill/SKILL.md
 var skillMD string
 
-//go:embed skill/reference/commands.md
-var commandsRef string
-
 //go:embed skill
 var skillFS embed.FS
 
@@ -52,7 +49,7 @@ func exitCode(err error) int {
 func main() {
 	cmd.SetVersion(version)
 	cmd.SetReadmeContents(readmeContents)
-	cmd.SetSkillData(skillMD, commandsRef, skillFS)
+	cmd.SetSkillData(skillMD, skillFS)
 	if err := cmd.Execute(); err != nil {
 		os.Exit(exitCode(err))
 	}

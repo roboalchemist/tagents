@@ -19,15 +19,15 @@ func TestMain(m *testing.M) {
 	if err := exec.Command("go", "build", "-o", binaryPath, ".").Run(); err != nil {
 		panic("failed to build binary: " + err.Error())
 	}
-	defer os.Remove(binaryPath)
+	defer os.Remove(binaryPath) //nolint:errcheck
 
 	// Create test tmux session (ignore error if already exists)
-	exec.Command("tmux", "new-session", "-d", "-s", testSession, "-c", "/tmp").Run()
+	_ = exec.Command("tmux", "new-session", "-d", "-s", testSession, "-c", "/tmp").Run()
 
 	code := m.Run()
 
 	// Cleanup
-	exec.Command("tmux", "kill-session", "-t", testSession).Run()
+	_ = exec.Command("tmux", "kill-session", "-t", testSession).Run()
 	os.Exit(code)
 }
 
@@ -171,7 +171,7 @@ func TestIntegration_Read(t *testing.T) {
 	}
 
 	// Custom line count
-	out, _, code = run("read", testSession, "10")
+	_, _, code = run("read", testSession, "10")
 	if code != 0 {
 		t.Fatalf("tagents read with line count failed (exit %d)", code)
 	}
@@ -215,9 +215,9 @@ func TestIntegration_Inject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(f.Name())
-	f.WriteString("# test goal\n")
-	f.Close()
+	defer os.Remove(f.Name()) //nolint:errcheck
+	_, _ = f.WriteString("# test goal\n")
+	_ = f.Close()
 
 	out, _, code := run("inject", testSession, f.Name())
 	if code != 0 {

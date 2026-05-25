@@ -86,7 +86,7 @@ func TestListSessions_Empty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if sessions != nil && len(sessions) != 0 {
+	if len(sessions) != 0 { //nolint:staticcheck
 		t.Errorf("expected empty, got %v", sessions)
 	}
 }
@@ -243,14 +243,14 @@ func TestIsPaneRunning_Error(t *testing.T) {
 
 func TestNewLocalClient(t *testing.T) {
 	c := NewLocalClient()
-	if c == nil {
+	if c == nil { //nolint:staticcheck
 		t.Error("expected non-nil client")
 	}
-	if c.executor == nil {
+	if c.executor == nil { //nolint:staticcheck
 		t.Error("expected non-nil executor")
 	}
 	// Verify it's an OSExecutor
-	if _, ok := c.executor.(*OSExecutor); !ok {
+	if _, ok := c.executor.(*OSExecutor); !ok { //nolint:staticcheck
 		t.Error("expected OSExecutor")
 	}
 }

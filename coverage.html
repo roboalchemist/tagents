@@ -1,0 +1,352 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>output: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/roboalchemist/tagents/pkg/output/jq.go (90.0%)</option>
+				
+				<option value="file1">github.com/roboalchemist/tagents/pkg/output/output.go (87.1%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package output
+
+import (
+        "bytes"
+        "encoding/json"
+        "fmt"
+
+        "github.com/itchyny/gojq"
+)
+
+// applyJQ applies a JQ filter expression to JSON bytes and returns the result as a string.
+func applyJQ(data []byte, filter string) (string, error) <span class="cov10" title="4">{
+        query, err := gojq.Parse(filter)
+        if err != nil </span><span class="cov5" title="2">{
+                return "", fmt.Errorf("invalid JQ expression %q: %w", filter, err)
+        }</span>
+
+        <span class="cov5" title="2">var input interface{}
+        if err := json.Unmarshal(data, &amp;input); err != nil </span><span class="cov1" title="1">{
+                return "", fmt.Errorf("JSON parse for JQ: %w", err)
+        }</span>
+
+        <span class="cov1" title="1">iter := query.Run(input)
+        var buf bytes.Buffer
+        for </span><span class="cov5" title="2">{
+                v, ok := iter.Next()
+                if !ok </span><span class="cov1" title="1">{
+                        break</span>
+                }
+                <span class="cov1" title="1">if err, ok := v.(error); ok </span><span class="cov0" title="0">{
+                        return "", fmt.Errorf("JQ error: %w", err)
+                }</span>
+                <span class="cov1" title="1">b, err := json.MarshalIndent(v, "", "  ")
+                if err != nil </span><span class="cov0" title="0">{
+                        return "", err
+                }</span>
+                <span class="cov1" title="1">buf.Write(b)
+                buf.WriteByte('\n')</span>
+        }
+        <span class="cov1" title="1">return string(bytes.TrimRight(buf.Bytes(), "\n")), nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package output
+
+import (
+        "encoding/json"
+        "fmt"
+        "os"
+        "strings"
+
+        "github.com/fatih/color"
+        "github.com/olekukonko/tablewriter"
+)
+
+// Mode controls output format.
+type Mode int
+
+const (
+        ModeTable     Mode = iota
+        ModeJSON
+        ModePlaintext
+)
+
+// Options configures output rendering.
+type Options struct {
+        Mode    Mode
+        NoColor bool
+        Debug   bool
+        Fields  string // comma-separated field selection
+        JQ      string // JQ filter expression
+}
+
+// ShouldUseColor returns true if color output is enabled.
+func (o Options) ShouldUseColor() bool <span class="cov6" title="4">{
+        if o.NoColor </span><span class="cov3" title="2">{
+                return false
+        }</span>
+        <span class="cov3" title="2">if os.Getenv("NO_COLOR") != "" </span><span class="cov1" title="1">{
+                return false
+        }</span>
+        // Auto-detect TTY: if stdout is not a terminal, disable color
+        <span class="cov1" title="1">fi, err := os.Stdout.Stat()
+        if err == nil &amp;&amp; (fi.Mode()&amp;os.ModeCharDevice) == 0 </span><span class="cov1" title="1">{
+                return false
+        }</span>
+        <span class="cov0" title="0">return true</span>
+}
+
+// RenderJSON marshals v to indented JSON and prints to stdout.
+// If opts.JQ is set, applies the JQ filter.
+// If opts.Fields is set, prunes to selected top-level fields.
+func RenderJSON(v interface{}, opts Options) error <span class="cov8" title="6">{
+        // Apply field selection if requested
+        if opts.Fields != "" </span><span class="cov3" title="2">{
+                v = pruneFields(v, splitFields(opts.Fields))
+        }</span>
+
+        <span class="cov8" title="6">b, err := json.MarshalIndent(v, "", "  ")
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("JSON marshal: %w", err)
+        }</span>
+
+        // Apply JQ filter if requested
+        <span class="cov8" title="6">if opts.JQ != "" </span><span class="cov3" title="2">{
+                filtered, err := applyJQ(b, opts.JQ)
+                if err != nil </span><span class="cov1" title="1">{
+                        return err
+                }</span>
+                <span class="cov1" title="1">fmt.Println(filtered)
+                return nil</span>
+        }
+
+        <span class="cov6" title="4">fmt.Println(string(b))
+        return nil</span>
+}
+
+// RenderTable prints a table to stdout.
+func RenderTable(headers []string, rows [][]string, opts Options) error <span class="cov1" title="1">{
+        if !opts.ShouldUseColor() </span><span class="cov1" title="1">{
+                color.NoColor = true
+        }</span>
+
+        <span class="cov1" title="1">table := tablewriter.NewWriter(os.Stdout)
+        table.SetHeader(headers)
+        table.SetBorder(false)
+        table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+        table.SetAlignment(tablewriter.ALIGN_LEFT)
+        table.SetCenterSeparator("")
+        table.SetColumnSeparator("  ")
+        table.SetRowSeparator("")
+        table.SetHeaderLine(false)
+        table.SetTablePadding("  ")
+        table.SetNoWhiteSpace(true)
+        table.SetAutoWrapText(false)
+        for _, row := range rows </span><span class="cov3" title="2">{
+                table.Append(row)
+        }</span>
+        <span class="cov1" title="1">table.Render()
+        return nil</span>
+}
+
+// RenderPlaintext prints tab-separated output with a header row.
+func RenderPlaintext(headers []string, rows [][]string, opts Options) error <span class="cov1" title="1">{
+        fmt.Println(strings.Join(headers, "\t"))
+        for _, row := range rows </span><span class="cov1" title="1">{
+                fmt.Println(strings.Join(row, "\t"))
+        }</span>
+        <span class="cov1" title="1">return nil</span>
+}
+
+// RenderError prints a structured error to stderr.
+// In JSON mode, outputs {"error": "...", "code": N}.
+// In other modes, prints "Error: ..." to stderr.
+func RenderError(msg string, code int, opts Options) <span class="cov3" title="2">{
+        if opts.Mode == ModeJSON </span><span class="cov1" title="1">{
+                b, _ := json.Marshal(map[string]interface{}{"error": msg, "code": code})
+                fmt.Fprintln(os.Stderr, string(b))
+        }</span> else<span class="cov1" title="1"> {
+                fmt.Fprintf(os.Stderr, "Error: %s\n", msg)
+        }</span>
+}
+
+// splitFields splits a comma-separated field list into a slice.
+func splitFields(fields string) []string <span class="cov8" title="6">{
+        if fields == "" </span><span class="cov1" title="1">{
+                return nil
+        }</span>
+        <span class="cov7" title="5">var result []string
+        for _, f := range strings.Split(fields, ",") </span><span class="cov10" title="9">{
+                f = strings.TrimSpace(f)
+                if f != "" </span><span class="cov10" title="9">{
+                        result = append(result, f)
+                }</span>
+        }
+        <span class="cov7" title="5">return result</span>
+}
+
+// pruneFields restricts a JSON-marshallable value to only the named fields.
+// Works on maps and slices of maps. Other types are returned unchanged.
+func pruneFields(v interface{}, fields []string) interface{} <span class="cov3" title="2">{
+        if len(fields) == 0 </span><span class="cov0" title="0">{
+                return v
+        }</span>
+        <span class="cov3" title="2">fieldSet := make(map[string]bool, len(fields))
+        for _, f := range fields </span><span class="cov6" title="4">{
+                fieldSet[strings.ToLower(f)] = true
+        }</span>
+        <span class="cov3" title="2">return pruneFieldsResolved(v, fieldSet)</span>
+}
+
+// pruneFieldsResolved prunes fields from a JSON-native or arbitrary struct value.
+// Arbitrary structs are round-tripped to JSON-native types exactly once.
+func pruneFieldsResolved(v interface{}, fieldSet map[string]bool) interface{} <span class="cov5" title="3">{
+        switch val := v.(type) </span>{
+        case []map[string]interface{}:<span class="cov1" title="1">
+                result := make([]map[string]interface{}, len(val))
+                for i, m := range val </span><span class="cov1" title="1">{
+                        result[i] = pruneMap(m, fieldSet)
+                }</span>
+                <span class="cov1" title="1">return result</span>
+        case []interface{}:<span class="cov0" title="0">
+                // Slice of arbitrary values (e.g. after JSON unmarshal of []SomeStruct)
+                result := make([]interface{}, len(val))
+                for i, item := range val </span><span class="cov0" title="0">{
+                        if m, ok := item.(map[string]interface{}); ok </span><span class="cov0" title="0">{
+                                result[i] = pruneMap(m, fieldSet)
+                        }</span> else<span class="cov0" title="0"> {
+                                result[i] = item
+                        }</span>
+                }
+                <span class="cov0" title="0">return result</span>
+        case map[string]interface{}:<span class="cov1" title="1">
+                return pruneMap(val, fieldSet)</span>
+        default:<span class="cov1" title="1">
+                // For arbitrary structs, round-trip through JSON once to get native types.
+                b, err := json.Marshal(v)
+                if err != nil </span><span class="cov0" title="0">{
+                        return v
+                }</span>
+                <span class="cov1" title="1">var m interface{}
+                if err := json.Unmarshal(b, &amp;m); err != nil </span><span class="cov0" title="0">{
+                        return v
+                }</span>
+                // m is now a JSON-native type; recurse without risk of infinite loop.
+                <span class="cov1" title="1">return pruneFieldsResolved(m, fieldSet)</span>
+        }
+}
+
+func pruneMap(m map[string]interface{}, keep map[string]bool) map[string]interface{} <span class="cov3" title="2">{
+        result := make(map[string]interface{})
+        for k, v := range m </span><span class="cov8" title="6">{
+                if keep[strings.ToLower(k)] </span><span class="cov6" title="4">{
+                        result[k] = v
+                }</span>
+        }
+        <span class="cov3" title="2">return result</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

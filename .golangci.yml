@@ -1,0 +1,28 @@
+version: "2"
+
+linters:
+  enable:
+    - errcheck
+    - staticcheck
+    - unused
+    - ineffassign
+    - govet
+
+  settings:
+    errcheck:
+      exclude-functions:
+        - fmt.Fprintln
+        - fmt.Fprintf
+        - (io.Closer).Close
+        - (*os.File).Close
+
+issues:
+  exclude-rules:
+    - path: "_test\\.go"
+      linters:
+        - errcheck
+        - ineffassign
+        - staticcheck
+    - linters:
+        - errcheck
+      text: "defer"

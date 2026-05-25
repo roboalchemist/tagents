@@ -11,12 +11,10 @@ import (
 )
 
 var skillMD string
-var commandsRef string
 var skillFS embed.FS
 
-func SetSkillData(md, commands string, fsys embed.FS) {
+func SetSkillData(md string, fsys embed.FS) {
 	skillMD = md
-	commandsRef = commands
 	skillFS = fsys
 }
 
