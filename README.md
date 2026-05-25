@@ -126,6 +126,17 @@ tagents skill print  # print SKILL.md to stdout
 | 2 | Usage error |
 | 3 | System error (tmux/ssh unavailable) |
 
+## Release Setup
+
+Releases use Gitea Actions with two required secrets in the repo settings:
+
+| Secret | Purpose |
+|--------|---------|
+| `TAP_TOKEN` | SSH private key or token with push access to `homebrew-tap` tap |
+| `CI_TOKEN` | Gitea token for uploading release assets |
+
+To publish a release: push a tag (`git tag v0.1.0 && git push origin v0.1.0`). The release workflow builds binaries and the bump-tap workflow updates the Homebrew formula automatically.
+
 ---
 
 Report bugs to: https://github.com/roboalchemist/tagents/issues
