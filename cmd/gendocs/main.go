@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/roboalchemist/tagents/cmd"
@@ -14,13 +14,15 @@ func main() {
 		dir = os.Args[1]
 	}
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
 	}
 	header := &doc.GenManHeader{
 		Title:   "TAGENTS",
 		Section: "1",
 	}
 	if err := doc.GenManTree(cmd.RootCmd(), header, dir); err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
 	}
 }

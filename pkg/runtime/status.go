@@ -28,12 +28,12 @@ func DetectStatus(paneContent string) Status {
 
 	// Shell prompt patterns — if the last line ends with one of these, agent is waiting
 	promptSuffixes := []string{
-		"$ ",  // bash/sh
-		"% ",  // zsh
-		"❯ ",  // oh-my-zsh and common prompt themes
-		"> ",  // generic
-		"# ",  // root shell
-		"$ ",  // trailing space variants
+		"$ ", // bash/sh
+		"% ", // zsh
+		"❯ ", // oh-my-zsh and common prompt themes
+		"> ", // generic
+		"# ", // root shell
+		"$ ", // trailing space variants
 	}
 	for _, suffix := range promptSuffixes {
 		if strings.HasSuffix(lastLine, strings.TrimRight(suffix, " ")) ||

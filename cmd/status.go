@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/roboalchemist/tagents/pkg/output"
 	"github.com/roboalchemist/tagents/pkg/runtime"
@@ -87,28 +88,28 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		return output.RenderJSON(fleet, opts)
 	}
 
-	// Human-readable output
-	fmt.Printf("Fleet: %d total  %d busy  %d idle  %d dead\n",
-		overall.Total, overall.Busy, overall.Idle, overall.Dead)
+	// Collect machine names in sorted order for deterministic output.
+	machineNames := make([]string, 0, len(byMachine))
+	for name := range byMachine {
+		machineNames = append(machineNames, name)
+	}
+	sort.Strings(machineNames)
 
-	if len(byMachine) > 1 {
-		fmt.Println()
-		headers := []string{"MACHINE", "TOTAL", "BUSY", "IDLE", "DEAD"}
-		var rows [][]string
-		for name, ms := range byMachine {
-			rows = append(rows, []string{
-				name,
-				fmt.Sprint(ms.Total),
-				fmt.Sprint(ms.Busy),
-				fmt.Sprint(ms.Idle),
-				fmt.Sprint(ms.Dead),
-			})
-		}
-		if opts.Mode == output.ModePlaintext {
-			return output.RenderPlaintext(headers, rows, opts)
-		}
-		return output.RenderTable(headers, rows, opts)
+	headers := []string{"MACHINE", "TOTAL", "BUSY", "IDLE", "DEAD"}
+	var rows [][]string
+	for _, name := range machineNames {
+		ms := byMachine[name]
+		rows = append(rows, []string{
+			name,
+			fmt.Sprint(ms.Total),
+			fmt.Sprint(ms.Busy),
+			fmt.Sprint(ms.Idle),
+			fmt.Sprint(ms.Dead),
+		})
 	}
 
-	return nil
+	if opts.Mode == output.ModePlaintext {
+		return output.RenderPlaintext(headers, rows, opts)
+	}
+	return output.RenderTable(headers, rows, opts)
 }

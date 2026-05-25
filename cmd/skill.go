@@ -31,8 +31,8 @@ The skill teaches Claude Code how to use tagents to manage agent fleets.`,
 }
 
 var skillPrintCmd = &cobra.Command{
-	Use:     "print",
-	Short:   "Print SKILL.md to stdout",
+	Use:   "print",
+	Short: "Print SKILL.md to stdout",
 	Example: `  tagents skill print
   tagents skill print | less`,
 	RunE: func(cmd *cobra.Command, args []string) error {

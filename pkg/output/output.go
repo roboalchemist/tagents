@@ -14,7 +14,7 @@ import (
 type Mode int
 
 const (
-	ModeTable     Mode = iota
+	ModeTable Mode = iota
 	ModeJSON
 	ModePlaintext
 )

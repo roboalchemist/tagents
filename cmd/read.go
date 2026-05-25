@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -66,9 +65,7 @@ func runRead(cmd *cobra.Command, args []string) error {
 			Machine: s.Machine,
 			Lines:   lineSlice,
 		}
-		b, _ := json.MarshalIndent(result, "", "  ")
-		fmt.Println(string(b))
-		return nil
+		return output.RenderJSON(result, opts)
 	}
 
 	fmt.Print(content)
