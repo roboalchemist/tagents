@@ -46,6 +46,24 @@ func getSessions(machine string, allMachines bool) ([]session.AgentSession, erro
 	return sessions, nil
 }
 
+// findSession finds a single session by fuzzy name match using the current scope flags.
+func findSession(query string) (*session.AgentSession, error) {
+	machine, allMachines := GetMachineScope()
+	sessions, err := getSessions(machine, allMachines)
+	if err != nil {
+		return nil, err
+	}
+	return session.FuzzyMatch(sessions, query)
+}
+
+// truncate shortens s to at most n bytes, appending "..." if truncated.
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n-3] + "..."
+}
+
 // colorStatus returns the status string, optionally colorized.
 func colorStatus(status string, opts output.Options) string {
 	if !opts.ShouldUseColor() {
@@ -61,12 +79,4 @@ func colorStatus(status string, opts output.Options) string {
 	default:
 		return status
 	}
-}
-
-// truncate shortens s to at most n runes, appending "..." if truncated.
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n-3] + "..."
 }
