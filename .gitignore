@@ -2,4 +2,7 @@ tagents
 dist/
 *.out
 coverage.out
+coverage.html
 vendor/
+man/
+.claude/
