@@ -28,6 +28,7 @@ tagents status                        # fleet summary
 tagents read my-agent                 # last 50 lines of agent pane
 tagents send my-agent "continue"      # send message to agent
 tagents wait my-agent 60s             # wait until idle
+tagents wait worker-1 worker-2 3m     # wait for any of a set to be idle
 ```
 
 ## Commands
@@ -42,7 +43,7 @@ tagents wait my-agent 60s             # wait until idle
 | `where <agent>` | Agent's current working directory |
 | `send <agent> <msg>` | Send message to agent (warns if busy; use `--force` to override) |
 | `broadcast <msg>` | Send message to all idle agents |
-| `wait <agent> [timeout]` | Block until idle; exit 1 on timeout (default 60s) |
+| `wait [agent ...] [timeout]` | Block until any listed agent is idle; or `--machine`/`--all-machines` for fleet mode (default 60s) |
 | `inject <agent> <file>` | Send `@<file>` to agent |
 | `skill print` | Print the bundled Claude Code skill to stdout |
 | `skill add` | Install skill to `~/.claude/skills/tagents/` |

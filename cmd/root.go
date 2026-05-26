@@ -12,16 +12,16 @@ import (
 var appVersion = "dev"
 
 var (
-	flagJSON        bool
-	flagPlaintext   bool
-	flagNoColor     bool
-	flagDebug       bool
-	flagVerbose     bool
-	flagQuiet       bool
-	flagFields      string
-	flagJQ          string
-	flagMachine     string
-	flagAllMachines bool
+	flagJSON         bool
+	flagPlaintext    bool
+	flagNoColor      bool
+	flagDebug        bool
+	flagVerbose      bool
+	flagQuiet        bool
+	flagFields       string
+	flagJQ           string
+	flagMachine      string
+	flagAllMachines  bool
 	flagVersionShort bool
 )
 

@@ -231,18 +231,28 @@ Examples:
 ## tagents wait
 
 ```
-Block polling until the agent's status is idle.
+Block until at least one agent from the set becomes idle.
 
-Timeout format: "60s", "2m", "1h". Default: 60s.
-Exit 0 when idle, exit 1 on timeout.
+Accepts one or more agent names (fuzzy-matched). With no agent names and a
+machine scope flag, waits for any idle agent on that machine or fleet.
+
+Timeout can be given as a --timeout flag or as the last positional argument
+(e.g. "60s", "2m", "1h"). The positional form is kept for backward compat.
+Default: 60s. Exit 0 when an idle agent is found, exit 1 on timeout.
 
 Usage:
-  tagents wait <agent> [timeout] [flags]
+  tagents wait [agent ...] [timeout] [flags]
+
+Flags:
+  -t, --timeout duration   Polling timeout (e.g. 60s, 2m, 1h) (default 1m0s)
 
 Examples:
   tagents wait my-agent
   tagents wait my-agent 120s
-  tagents wait my-agent 5m
+  tagents wait worker-1 worker-2 worker-3
+  tagents wait worker-1 worker-2 --timeout 3m
+  tagents wait --machine gateway
+  tagents wait --all-machines --timeout 5m
 ```
 
 ---

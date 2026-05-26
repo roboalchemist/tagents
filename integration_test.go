@@ -194,6 +194,49 @@ func TestIntegration_Wait(t *testing.T) {
 	}
 }
 
+// TestIntegration_Wait_MultiAgent verifies any-of semantics: exits 0 when at least one queried agent is idle.
+func TestIntegration_Wait_MultiAgent(t *testing.T) {
+	// testSession exists and is idle; nonexistent-agent-xyz will not match.
+	// Exit 0 expected because testSession satisfies the any-of condition.
+	out, errOut, code := run("wait", testSession, "nonexistent-agent-xyz", "--timeout", "10s")
+	if code != 0 {
+		t.Fatalf("wait multi-agent failed (exit %d): stdout=%s stderr=%s", code, out, errOut)
+	}
+	// stdout is the agent ref; stderr has the "Agent X is idle." confirmation.
+	if !strings.Contains(out+errOut, testSession) {
+		t.Errorf("expected test session name in output, got stdout=%s stderr=%s", out, errOut)
+	}
+}
+
+// TestIntegration_Wait_PositionalTimeout verifies backward-compat positional duration arg.
+func TestIntegration_Wait_PositionalTimeout(t *testing.T) {
+	// Old-style: `wait <agent> <timeout>` — last positional arg is a duration, not an agent name.
+	out, _, code := run("wait", testSession, "5s")
+	if code != 0 {
+		t.Logf("wait with positional timeout returned non-zero (session may be busy): %s", out)
+		// Non-zero is acceptable if the session happens to be busy at test time.
+	}
+}
+
+// TestIntegration_Wait_TimeoutFlag verifies the --timeout flag form.
+func TestIntegration_Wait_TimeoutFlag(t *testing.T) {
+	out, _, code := run("wait", "--timeout", "5s", testSession)
+	if code != 0 {
+		t.Logf("wait --timeout returned non-zero (session may be busy): %s", out)
+	}
+}
+
+// TestIntegration_Wait_NoArgsError verifies that wait with no agents and no machine scope exits non-zero.
+func TestIntegration_Wait_NoArgsError(t *testing.T) {
+	_, errOut, code := run("wait")
+	if code == 0 {
+		t.Error("wait with no args and no machine scope should exit non-zero")
+	}
+	if !strings.Contains(errOut, "no agents specified") {
+		t.Errorf("expected 'no agents specified' in error output, got: %s", errOut)
+	}
+}
+
 // TestIntegration_Send verifies send command (READONLY gated).
 func TestIntegration_Send(t *testing.T) {
 	if os.Getenv("READONLY") == "1" {

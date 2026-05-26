@@ -18,6 +18,8 @@ tagents status --json                 # fleet counts in JSON
 tagents read my-agent                 # last 50 lines of agent pane
 tagents send my-agent "continue"      # send message to agent
 tagents wait my-agent 60s             # wait until idle
+tagents wait worker-1 worker-2 3m     # wait for any of a set to be idle
+tagents wait --all-machines --timeout 5m  # fleet mode: any idle agent across all machines
 tagents inject my-agent /tmp/goal.md  # send @/tmp/goal.md
 ```
 
@@ -111,7 +113,7 @@ All commands accept these global output flags:
 | `where <agent>` | Agent's current working directory |
 | `send <agent> <msg>` | Send message (warns if busy; use `--force`) |
 | `broadcast <msg>` | Send to all idle agents |
-| `wait <agent> [timeout]` | Block until idle (default 60s, exit 1 on timeout) |
+| `wait [agent ...] [timeout]` | Block until any listed agent is idle; fleet mode with `--machine`/`--all-machines` (default 60s) |
 | `inject <agent> <file>` | Send `@<file>` to agent |
 
 Full flag reference: [skill/reference/commands.md](reference/commands.md)
