@@ -17,8 +17,9 @@ tagents list --all-machines           # include all SSH config machines
 tagents status --json                 # fleet counts in JSON
 tagents read my-agent                 # last 50 lines of agent pane
 tagents send my-agent "continue"      # send message to agent
-tagents wait my-agent 60s             # wait until idle
-tagents wait worker-1 worker-2 3m     # wait for any of a set to be idle
+tagents wait my-agent 60s             # wait until pane-idle
+tagents wait worker-1 worker-2 3m     # wait for any of a set to be pane-idle
+tagents wait my-agent --log-idle 90s --timeout 30m  # return if pane-idle OR log-stalled
 tagents wait --all-machines --timeout 5m  # fleet mode: any idle agent across all machines
 tagents inject my-agent /tmp/goal.md  # send @/tmp/goal.md
 ```
@@ -27,11 +28,12 @@ tagents inject my-agent /tmp/goal.md  # send @/tmp/goal.md
 
 ```
 $ tagents list
-NAME         RUNTIME  STATUS  CWD                       PREVIEW
-web-agent  unknown  busy    /home/user/projects/aplane2  {"seq":1058,"ts":"2026-05-22T19:29:21.233Z"...
+NAME         RUNTIME  STATUS  LOG_IDLE  CWD                       PREVIEW
+web-agent  unknown  busy    7m12s     /home/user/projects/aplane2  {"seq":1058,"ts":"2026-05-22T19:29:21.233Z"...
 
 $ tagents status
-Fleet: 1 total  1 busy  0 idle  0 dead
+MACHINE  TOTAL  BUSY  IDLE  DEAD  LOGS  MAX_LOG_IDLE
+local    1      1     0     0     1     7m12s
 
 $ tagents status --json
 {
@@ -39,7 +41,9 @@ $ tagents status --json
     "total": 1,
     "busy": 1,
     "idle": 0,
-    "dead": 0
+    "dead": 0,
+    "logStale": 1,
+    "logIdleMax": 432000000000
   }
 }
 
@@ -51,7 +55,9 @@ $ tagents list --json
     "runtime": "unknown",
     "status": "busy",
     "cwd": "/home/user/projects/aplane2",
-    "preview": "{\"seq\":1058,\"ts\":\"2026-05-22T19:29:21.233Z\"..."
+    "preview": "{\"seq\":1058,\"ts\":\"2026-05-22T19:29:21.233Z\"...",
+    "logIdle": 432000000000,
+    "logIdleFound": true
   }
 ]
 
@@ -65,6 +71,16 @@ nuc1                yes        3
 iris                yes        32
 example-host                no         0
 ```
+
+## Wait / Babysit Wedged Agents
+
+`tagents wait` returns when pane-based status becomes idle. Add `--log-idle <duration>` to also return when the agent transcript has stopped advancing for that threshold:
+
+```bash
+tagents wait claude-worker --log-idle 90s --timeout 30m --json
+```
+
+Use this when babysitting Claude Code workers that may hit an empty-turn/context-wedge stall: the pane can look busy, but the JSONL transcript stops changing. The combined readiness condition is **pane idle OR log idle >= threshold**. JSON output includes `readyReason`, `logIdle`, and `logIdleFound` so automation can distinguish `pane idle` from a `log idle ... >= ...` stall.
 
 ## Machine Scope
 
@@ -105,15 +121,15 @@ All commands accept these global output flags:
 
 | Command | Description |
 |---------|-------------|
-| `list` | List sessions with runtime, status, cwd, preview |
+| `list` | List sessions with runtime, status, log-idle age, cwd, preview |
 | `machines` | List SSH hosts with reachability and agent count |
-| `status` | Fleet counts (total/busy/idle/dead) |
+| `status` | Fleet counts (total/busy/idle/dead plus log transcript summary) |
 | `read <agent> [N]` | Last N lines of agent tmux pane (default 50) |
 | `log <agent> [N]` | Session transcript (Claude Code JSONL parsed) |
 | `where <agent>` | Agent's current working directory |
 | `send <agent> <msg>` | Send message (warns if busy; use `--force`) |
 | `broadcast <msg>` | Send to all idle agents |
-| `wait [agent ...] [timeout]` | Block until any listed agent is idle; fleet mode with `--machine`/`--all-machines` (default 60s) |
+| `wait [agent ...] [timeout]` | Block until any listed agent is ready; pane-idle by default, or pane-idle OR stale transcript with `--log-idle <duration>`; fleet mode with `--machine`/`--all-machines` (default 60s) |
 | `inject <agent> <file>` | Send `@<file>` to agent |
 
 Full flag reference: [skill/reference/commands.md](reference/commands.md)

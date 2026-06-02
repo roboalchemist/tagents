@@ -27,28 +27,39 @@ tagents list                          # list all local agent sessions
 tagents status                        # fleet summary
 tagents read my-agent                 # last 50 lines of agent pane
 tagents send my-agent "continue"      # send message to agent
-tagents wait my-agent 60s             # wait until idle
-tagents wait worker-1 worker-2 3m     # wait for any of a set to be idle
+tagents wait my-agent 60s             # wait until pane-idle
+tagents wait worker-1 worker-2 3m     # wait for any of a set to be pane-idle
+tagents wait my-agent --log-idle 90s --timeout 30m  # also return if the log stalls
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `list` | List sessions with runtime, status, cwd, and preview |
+| `list` | List sessions with runtime, status, log-idle age, cwd, and preview |
 | `machines` | List SSH hosts with reachability and agent count |
-| `status` | Fleet counts (total/busy/idle/dead) |
+| `status` | Fleet counts (total/busy/idle/dead plus log transcript summary) |
 | `read <agent> [N]` | Last N lines of agent's tmux pane (default 50) |
 | `log <agent> [N]` | Session transcript — Claude Code JSONL parsed (default 100 lines) |
 | `where <agent>` | Agent's current working directory |
 | `send <agent> <msg>` | Send message to agent (warns if busy; use `--force` to override) |
 | `broadcast <msg>` | Send message to all idle agents |
-| `wait [agent ...] [timeout]` | Block until any listed agent is idle; or `--machine`/`--all-machines` for fleet mode (default 60s) |
+| `wait [agent ...] [timeout]` | Block until any listed agent is ready; pane-idle by default, or pane-idle OR stale transcript with `--log-idle <duration>`; supports `--machine`/`--all-machines` fleet mode (default 60s) |
 | `inject <agent> <file>` | Send `@<file>` to agent |
 | `skill print` | Print the bundled Claude Code skill to stdout |
 | `skill add` | Install skill to `~/.claude/skills/tagents/` |
 | `docs` | Display full documentation |
 | `completion` | Generate shell completions (bash/zsh/fish/powershell) |
+
+## Waiting and Log-Idle Babysitting
+
+`tagents wait` normally returns when pane-based detection sees an idle shell or agent prompt. Add `--log-idle <duration>` to also treat an agent as ready when its Claude/Codex JSONL transcript has not advanced for that long:
+
+```bash
+tagents wait claude-worker --log-idle 90s --timeout 30m
+```
+
+This is useful for babysitting wedged Claude agents: empty-turn/context-wedge stalls can leave the pane showing a spinner or busy-looking output even though the transcript has stopped advancing. With `--log-idle`, wait returns on either signal: pane idle **OR** log stale for the threshold. The JSON result includes `readyReason` and log-idle fields so scripts can tell whether the agent returned because of `pane idle` or `log idle ... >= ...`.
 
 ## Machine Scope
 

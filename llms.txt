@@ -6,20 +6,24 @@ No API keys. Uses tmux and SSH from PATH. Reads ~/.ssh/config for machine discov
 
 ## Commands
 
-- list [--machine <host>] [--all-machines]: List all agent sessions (name, runtime, status, cwd, preview)
+- list [--machine <host>] [--all-machines]: List all agent sessions (name, runtime, status, log-idle age, cwd, preview)
 - machines: List SSH-config machines with reachability and agent count
-- status [--machine <host>] [--all-machines]: Fleet summary counts (total/busy/idle/dead)
+- status [--machine <host>] [--all-machines]: Fleet summary counts (total/busy/idle/dead plus log-stale/log-idle summary)
 - read <agent> [lines]: Last N lines of agent's tmux pane (default 50)
 - log <agent> [lines] [--raw]: Agent session transcript (Claude Code JSONL parsed, default 100 lines)
 - where <agent>: Agent's current working directory
 - send <agent> <message> [--force]: Send message to agent (warns if busy, --force to override)
 - broadcast <message> [--runtime claude|codex] [--dry-run]: Send to all idle agents
-- wait <agent> [timeout]: Block until agent is idle (default 60s; exit 1 on timeout)
+- wait <agent> [timeout] [--log-idle <duration>]: Block until agent is ready (pane-idle OR, when enabled, transcript stale for threshold; default timeout 60s; exit 1 on timeout)
 - inject <agent> <file>: Send @<file> to agent
 - skill print: Print bundled SKILL.md to stdout
 - skill add: Install skill to ~/.claude/skills/tagents/
 - docs: Display README.md
 - completion [bash|zsh|fish|powershell]: Generate shell completions
+
+## Log-idle babysitting
+
+Use `tagents wait claude-worker --log-idle 90s --timeout 30m --json` to babysit workers that may wedge while the pane still looks busy. Readiness is pane-idle OR log-idle >= threshold. The JSON result includes `readyReason`, `logIdle`, and `logIdleFound`, which lets automation distinguish a normal idle return from an empty-turn/context-wedge stall where the JSONL transcript stopped advancing.
 
 ## Global flags
 

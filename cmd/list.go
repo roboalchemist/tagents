@@ -13,7 +13,7 @@ var listCmd = &cobra.Command{
 	Short: "List all agent sessions",
 	Long: `List all agent sessions in scope.
 
-Columns: machine (only when multi-machine scope), session name, runtime, status, cwd, preview.
+Columns: machine (only when multi-machine scope), session name, runtime, status, log-idle age, cwd, preview.
 Status colors: idle=green, busy=yellow, dead=red.
 
 Examples:
@@ -21,7 +21,7 @@ Examples:
   tagents list --json
   tagents list --machine gateway
   tagents list --all-machines
-  tagents list --json --fields name,status`,
+  tagents list --json --fields name,status,logIdle`,
 	Example: `  tagents list
   tagents list --json | jq '.[0]'
   tagents list --all-machines --plaintext`,
