@@ -1,10 +1,13 @@
 package runtime
 
 import (
+	"bufio"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 // FindLogFile finds the most recent log file for a session.
@@ -63,4 +66,81 @@ func findClaudeLog(sessionName string) string {
 func findCodexLog(sessionName string) string {
 	// Codex log path conventions vary — return empty for now
 	return ""
+}
+
+// LogIdleDuration determines how long an agent's session log has been idle.
+// It locates the transcript via FindLogFile and returns the time since
+// the log last advanced. Prefers parsing the last JSON line's "timestamp"
+// field (RFC 3339 with fractional seconds); falls back to file mtime when
+// the timestamp is missing or unparseable.
+//
+// found is false when no log file exists for this session+Runtime pair
+// (e.g. Codex, Unknown, or no Claude project directory).
+func LogIdleDuration(sessionName string, rt Runtime, now time.Time) (idle time.Duration, found bool) {
+	logPath := FindLogFile(sessionName, rt)
+	if logPath == "" {
+		return 0, false
+	}
+
+	fi, err := os.Stat(logPath)
+	if err != nil {
+		// TOCTOU: file deleted between FindLogFile and Stat
+		return 0, false
+	}
+	mtimeIdle := now.Sub(fi.ModTime())
+
+	// Read tail of file to obtain the last JSON line.
+	// 4 KiB is enough to capture the last line of even large tool-result
+	// entries while keeping the read cheap.
+	const tailSize = 4096
+	f, err := os.Open(logPath)
+	if err != nil {
+		// Another TOCTOU — treat as not found
+		return 0, false
+	}
+	defer f.Close()
+
+	offset := fi.Size() - tailSize
+	if offset < 0 {
+		offset = 0
+	}
+	if _, err := f.Seek(offset, 0); err != nil {
+		return mtimeIdle, true
+	}
+
+	var lastLine string
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line != "" {
+			lastLine = line
+		}
+	}
+
+	if lastLine == "" {
+		// Empty file or only blank lines — fall back to mtime
+		return mtimeIdle, true
+	}
+
+	// Attempt to extract the "timestamp" field from the last JSON line
+	var entry map[string]interface{}
+	if err := json.Unmarshal([]byte(lastLine), &entry); err != nil {
+		return mtimeIdle, true
+	}
+
+	tsRaw, ok := entry["timestamp"]
+	if !ok {
+		return mtimeIdle, true
+	}
+	tsStr, ok := tsRaw.(string)
+	if !ok {
+		return mtimeIdle, true
+	}
+
+	parsed, err := time.Parse(time.RFC3339Nano, tsStr)
+	if err != nil {
+		return mtimeIdle, true
+	}
+
+	return now.Sub(parsed), true
 }
