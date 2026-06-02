@@ -77,7 +77,13 @@ func findCodexLog(sessionName string) string {
 // found is false when no log file exists for this session+Runtime pair
 // (e.g. Codex, Unknown, or no Claude project directory).
 func LogIdleDuration(sessionName string, rt Runtime, now time.Time) (idle time.Duration, found bool) {
-	logPath := FindLogFile(sessionName, rt)
+	return LogIdleDurationFromPath(FindLogFile(sessionName, rt), now)
+}
+
+// LogIdleDurationFromPath determines how long a known session log path has been idle.
+// It is useful for callers that poll repeatedly and want to cache FindLogFile's
+// filesystem walk outside the hot path.
+func LogIdleDurationFromPath(logPath string, now time.Time) (idle time.Duration, found bool) {
 	if logPath == "" {
 		return 0, false
 	}
@@ -111,7 +117,7 @@ func LogIdleDuration(sessionName string, rt Runtime, now time.Time) (idle time.D
 	var lastLine string
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		line := scanner.Text()
+		line := strings.TrimSpace(scanner.Text())
 		if line != "" {
 			lastLine = line
 		}

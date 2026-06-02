@@ -13,6 +13,7 @@ import (
 )
 
 var flagWaitTimeout time.Duration
+var flagWaitLogIdle time.Duration
 
 var waitCmd = &cobra.Command{
 	Use:   "wait [agent ...] [timeout]",
@@ -24,17 +25,23 @@ machine scope flag, waits for any idle agent on that machine or fleet.
 
 Timeout can be given as a --timeout flag or as the last positional argument
 (e.g. "60s", "2m", "1h"). The positional form is kept for backward compat.
-Default: 60s. Exit 0 when an idle agent is found, exit 1 on timeout.
+Default: 60s. Exit 0 when an agent is ready, exit 1 on timeout.
+
+With --log-idle, a busy-looking agent is also considered ready when its
+Claude/Codex transcript has not advanced for at least the given duration. This
+catches empty-turn/context-wedge stalls that pane-based idle detection misses.
 
 Examples:
   tagents wait my-agent
   tagents wait my-agent 120s
   tagents wait worker-1 worker-2 worker-3
   tagents wait worker-1 worker-2 --timeout 3m
+  tagents wait my-agent --log-idle 90s --timeout 30m
   tagents wait --machine gateway
   tagents wait --all-machines --timeout 5m`,
 	Example: `  tagents wait my-agent
   tagents wait worker-1 worker-2 3m
+  tagents wait my-agent --log-idle 90s --timeout 30m
   tagents wait --all-machines`,
 	SuggestFor: []string{"watch", "block", "poll"},
 	Args:       cobra.ArbitraryArgs,
@@ -43,6 +50,7 @@ Examples:
 
 func init() {
 	waitCmd.Flags().DurationVarP(&flagWaitTimeout, "timeout", "t", 60*time.Second, "Polling timeout (e.g. 60s, 2m, 1h)")
+	waitCmd.Flags().DurationVar(&flagWaitLogIdle, "log-idle", 0, "Treat an agent as ready when its transcript has been stale for this duration (0 disables)")
 	rootCmd.AddCommand(waitCmd)
 }
 
@@ -65,11 +73,13 @@ func runWait(cmd *cobra.Command, args []string) error {
 		if allMachines {
 			scope = "all machines"
 		}
-		fmt.Fprintf(os.Stderr, "Waiting for any idle agent on %s (timeout: %s)...\n", scope, timeout)
+		fmt.Fprintf(os.Stderr, "Waiting for any ready agent on %s (timeout: %s%s)...\n", scope, timeout, logIdleSuffix(flagWaitLogIdle))
 	} else {
-		fmt.Fprintf(os.Stderr, "Waiting for any of [%s] to be idle (timeout: %s)...\n",
-			strings.Join(queries, ", "), timeout)
+		fmt.Fprintf(os.Stderr, "Waiting for any of [%s] to be ready (timeout: %s%s)...\n",
+			strings.Join(queries, ", "), timeout, logIdleSuffix(flagWaitLogIdle))
 	}
+
+	logPaths := make(map[string]string)
 
 	for time.Now().Before(deadline) {
 		sessions, err := getSessions(machine, allMachines)
@@ -80,9 +90,13 @@ func runWait(cmd *cobra.Command, args []string) error {
 		candidates := resolveWaitCandidates(sessions, queries, fleetMode)
 
 		for _, s := range candidates {
-			if s.Status == runtime.Idle {
+			ready, reason, logIdle, logFound := waitReady(s, flagWaitLogIdle, logPaths, time.Now())
+			if ready {
 				ref := waitAgentRef(s)
-				fmt.Fprintf(os.Stderr, "Agent %s is idle.\n", ref)
+				s.LogIdle = logIdle
+				s.LogIdleFound = logFound
+				s.ReadyReason = reason
+				fmt.Fprintf(os.Stderr, "Agent %s is ready (%s).\n", ref, reason)
 				if opts.Mode == output.ModeJSON {
 					return output.RenderJSON(s, opts)
 				}
@@ -95,7 +109,14 @@ func runWait(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(os.Stderr, "  (no matching agents found yet, retrying...)\n")
 		} else {
 			for _, s := range candidates {
-				fmt.Fprintf(os.Stderr, "  %s: %s...\n", waitAgentRef(s), s.Status)
+				detail := string(s.Status)
+				if flagWaitLogIdle > 0 {
+					_, _, logIdle, logFound := waitReady(s, flagWaitLogIdle, logPaths, time.Now())
+					if logFound {
+						detail = fmt.Sprintf("%s, log idle %s", detail, formatDuration(logIdle))
+					}
+				}
+				fmt.Fprintf(os.Stderr, "  %s: %s...\n", waitAgentRef(s), detail)
 			}
 		}
 
@@ -103,9 +124,9 @@ func runWait(cmd *cobra.Command, args []string) error {
 	}
 
 	if fleetMode {
-		return fmt.Errorf("timeout: no idle agent found after %s", timeout)
+		return fmt.Errorf("timeout: no ready agent found after %s", timeout)
 	}
-	return fmt.Errorf("timeout: none of [%s] became idle after %s", strings.Join(queries, ", "), timeout)
+	return fmt.Errorf("timeout: none of [%s] became ready after %s", strings.Join(queries, ", "), timeout)
 }
 
 // parseWaitArgs splits positional args into agent queries and timeout.
@@ -151,4 +172,33 @@ func waitAgentRef(s session.AgentSession) string {
 		return s.Machine + ":" + s.Name
 	}
 	return s.Name
+}
+
+func waitReady(s session.AgentSession, threshold time.Duration, logPaths map[string]string, now time.Time) (ready bool, reason string, logIdle time.Duration, logFound bool) {
+	if s.Status == runtime.Idle {
+		return true, "pane idle", s.LogIdle, s.LogIdleFound
+	}
+	if threshold <= 0 || s.Machine != "" {
+		return false, "", s.LogIdle, s.LogIdleFound
+	}
+	ref := waitAgentRef(s)
+	logPath, ok := logPaths[ref]
+	if !ok {
+		logPath = runtime.FindLogFile(s.Name, s.Runtime)
+		if logPath != "" {
+			logPaths[ref] = logPath
+		}
+	}
+	logIdle, logFound = runtime.LogIdleDurationFromPath(logPath, now)
+	if logFound && logIdle >= threshold {
+		return true, fmt.Sprintf("log idle %s >= %s", formatDuration(logIdle), threshold), logIdle, true
+	}
+	return false, "", logIdle, logFound
+}
+
+func logIdleSuffix(threshold time.Duration) string {
+	if threshold <= 0 {
+		return ""
+	}
+	return fmt.Sprintf(", log-idle: %s", threshold)
 }

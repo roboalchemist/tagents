@@ -40,6 +40,7 @@ func runList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	sessions = withLogIdle(sessions)
 	multiMachine := allMachines || machine != ""
 
 	if opts.Mode == output.ModeJSON {
@@ -49,9 +50,9 @@ func runList(cmd *cobra.Command, args []string) error {
 	// Build table rows
 	var headers []string
 	if multiMachine {
-		headers = []string{"MACHINE", "NAME", "RUNTIME", "STATUS", "CWD", "PREVIEW"}
+		headers = []string{"MACHINE", "NAME", "RUNTIME", "STATUS", "LOG_IDLE", "CWD", "PREVIEW"}
 	} else {
-		headers = []string{"NAME", "RUNTIME", "STATUS", "CWD", "PREVIEW"}
+		headers = []string{"NAME", "RUNTIME", "STATUS", "LOG_IDLE", "CWD", "PREVIEW"}
 	}
 
 	rows := make([][]string, 0, len(sessions))
@@ -59,15 +60,16 @@ func runList(cmd *cobra.Command, args []string) error {
 		status := colorStatus(string(s.Status), opts)
 		cwd := truncate(s.CWD, 40)
 		preview := truncate(s.Preview, 50)
+		logIdle := formatLogIdle(s)
 		var row []string
 		if multiMachine {
 			m := s.Machine
 			if m == "" {
 				m = "local"
 			}
-			row = []string{m, s.Name, string(s.Runtime), status, cwd, preview}
+			row = []string{m, s.Name, string(s.Runtime), status, logIdle, cwd, preview}
 		} else {
-			row = []string{s.Name, string(s.Runtime), status, cwd, preview}
+			row = []string{s.Name, string(s.Runtime), status, logIdle, cwd, preview}
 		}
 		rows = append(rows, row)
 	}
