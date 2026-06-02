@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/roboalchemist/tagents/pkg/output"
 	"github.com/roboalchemist/tagents/pkg/runtime"
@@ -29,10 +30,12 @@ Examples:
 func init() { rootCmd.AddCommand(statusCmd) }
 
 type machineStatus struct {
-	Total int `json:"total"`
-	Busy  int `json:"busy"`
-	Idle  int `json:"idle"`
-	Dead  int `json:"dead"`
+	Total      int           `json:"total"`
+	Busy       int           `json:"busy"`
+	Idle       int           `json:"idle"`
+	Dead       int           `json:"dead"`
+	LogStale   int           `json:"logStale,omitempty"`
+	LogIdleMax time.Duration `json:"logIdleMax,omitempty"`
 }
 
 type fleetStatus struct {
@@ -48,6 +51,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	sessions = withLogIdle(sessions)
 
 	byMachine := make(map[string]*machineStatus)
 	overall := &machineStatus{}
@@ -63,6 +67,16 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		ms := byMachine[m]
 		ms.Total++
 		overall.Total++
+		if s.LogIdleFound {
+			ms.LogStale++
+			overall.LogStale++
+			if s.LogIdle > ms.LogIdleMax {
+				ms.LogIdleMax = s.LogIdle
+			}
+			if s.LogIdle > overall.LogIdleMax {
+				overall.LogIdleMax = s.LogIdle
+			}
+		}
 		switch s.Status {
 		case runtime.Busy:
 			ms.Busy++
@@ -95,7 +109,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	}
 	sort.Strings(machineNames)
 
-	headers := []string{"MACHINE", "TOTAL", "BUSY", "IDLE", "DEAD"}
+	headers := []string{"MACHINE", "TOTAL", "BUSY", "IDLE", "DEAD", "LOGS", "MAX_LOG_IDLE"}
 	var rows [][]string
 	for _, name := range machineNames {
 		ms := byMachine[name]
@@ -105,6 +119,8 @@ func runStatus(cmd *cobra.Command, args []string) error {
 			fmt.Sprint(ms.Busy),
 			fmt.Sprint(ms.Idle),
 			fmt.Sprint(ms.Dead),
+			fmt.Sprint(ms.LogStale),
+			formatStatusLogIdle(ms.LogIdleMax),
 		})
 	}
 
@@ -112,4 +128,11 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		return output.RenderPlaintext(headers, rows, opts)
 	}
 	return output.RenderTable(headers, rows, opts)
+}
+
+func formatStatusLogIdle(d time.Duration) string {
+	if d == 0 {
+		return "-"
+	}
+	return formatDuration(d)
 }

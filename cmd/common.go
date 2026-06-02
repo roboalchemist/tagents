@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/roboalchemist/tagents/pkg/output"
+	"github.com/roboalchemist/tagents/pkg/runtime"
 	"github.com/roboalchemist/tagents/pkg/session"
 	"github.com/roboalchemist/tagents/pkg/ssh"
 	"github.com/fatih/color"
@@ -44,6 +45,38 @@ func getSessions(machine string, allMachines bool) ([]session.AgentSession, erro
 		fmt.Fprintf(os.Stderr, "warning: %v\n", e)
 	}
 	return sessions, nil
+}
+
+// withLogIdle annotates local sessions with transcript staleness. Remote sessions
+// are left unset because their logs live on the remote host.
+func withLogIdle(sessions []session.AgentSession) []session.AgentSession {
+	now := time.Now()
+	for i := range sessions {
+		if sessions[i].Machine != "" {
+			continue
+		}
+		idle, found := runtime.LogIdleDuration(sessions[i].Name, sessions[i].Runtime, now)
+		sessions[i].LogIdle = idle
+		sessions[i].LogIdleFound = found
+	}
+	return sessions
+}
+
+func formatLogIdle(s session.AgentSession) string {
+	if !s.LogIdleFound {
+		return "-"
+	}
+	return formatDuration(s.LogIdle)
+}
+
+func formatDuration(d time.Duration) string {
+	if d < 0 {
+		d = 0
+	}
+	if d < time.Second {
+		return d.Truncate(time.Millisecond).String()
+	}
+	return d.Truncate(time.Second).String()
 }
 
 // findSession finds a single session by fuzzy name match using the current scope flags.

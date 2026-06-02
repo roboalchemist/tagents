@@ -1,6 +1,7 @@
 package main_test
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 const testSession = "tagents-test-session"
@@ -32,7 +34,13 @@ func TestMain(m *testing.M) {
 }
 
 func run(args ...string) (string, string, int) {
-	cmd := exec.Command(binaryPath, args...)
+	return runWithTimeout(15*time.Second, args...)
+}
+
+func runWithTimeout(timeout time.Duration, args ...string) (string, string, int) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, binaryPath, args...)
 	var outBuf, errBuf strings.Builder
 	outBuf.Reset()
 	errBuf.Reset()
@@ -40,6 +48,9 @@ func run(args ...string) (string, string, int) {
 	cmd.Stderr = &errBuf
 	err := cmd.Run()
 	code := 0
+	if ctx.Err() == context.DeadlineExceeded {
+		return outBuf.String(), errBuf.String(), 124
+	}
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			code = exitErr.ExitCode()
@@ -333,7 +344,9 @@ func TestIntegration_UsageErrors(t *testing.T) {
 
 // runWithEnv runs the binary with additional env vars merged on top of the current environment.
 func runWithEnv(env map[string]string, args ...string) (string, string, int) {
-	cmd := exec.Command(binaryPath, args...)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, binaryPath, args...)
 	// Start from current environment so PATH and other essentials are preserved.
 	base := os.Environ()
 	for k, v := range env {
@@ -345,6 +358,9 @@ func runWithEnv(env map[string]string, args ...string) (string, string, int) {
 	cmd.Stderr = &errBuf
 	err := cmd.Run()
 	code := 0
+	if ctx.Err() == context.DeadlineExceeded {
+		return outBuf.String(), errBuf.String(), 124
+	}
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			code = exitErr.ExitCode()
@@ -359,18 +375,18 @@ func runWithEnv(env map[string]string, args ...string) (string, string, int) {
 // The machines command pings all SSH hosts in parallel; skip when -short is set
 // to keep the normal test suite fast.
 func TestIntegration_Machines(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping machines test in short mode (SSH pings are slow)")
+	if testing.Short() || os.Getenv("TAGENTS_RUN_SLOW_MACHINES") == "" {
+		t.Skip("skipping machines test by default (SSH pings are slow); set TAGENTS_RUN_SLOW_MACHINES=1 to run")
 	}
 
-	// Default output (table) — may be slow due to SSH pings.
-	_, _, code := run("machines")
+	// Default output (table) — may be slow due to SSH pings, but must be bounded.
+	_, _, code := runWithTimeout(20*time.Second, "machines")
 	if code != 0 {
 		t.Fatalf("tagents machines failed (exit %d)", code)
 	}
 
 	// --json mode: verify valid JSON array output.
-	out, _, code := run("machines", "--json")
+	out, _, code := runWithTimeout(20*time.Second, "machines", "--json")
 	if code != 0 {
 		t.Fatalf("tagents machines --json failed (exit %d)", code)
 	}
@@ -380,7 +396,7 @@ func TestIntegration_Machines(t *testing.T) {
 	}
 
 	// --plaintext mode: just verify no error.
-	_, _, code = run("machines", "--plaintext")
+	_, _, code = runWithTimeout(20*time.Second, "machines", "--plaintext")
 	if code != 0 {
 		t.Fatalf("tagents machines --plaintext failed (exit %d)", code)
 	}
