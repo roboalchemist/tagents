@@ -38,7 +38,7 @@ Available Commands:
   send        Send a message to an agent
   skill       Manage Claude Code skill installation
   status      Fleet status summary
-  wait        Wait until agent is idle
+  wait        Wait until agent is ready
   where       Get agent's current working directory
 ```
 
@@ -49,7 +49,7 @@ Available Commands:
 ```
 List all agent sessions in scope.
 
-Columns: machine (only when multi-machine scope), session name, runtime, status, cwd, preview.
+Columns: machine (only when multi-machine scope), session name, runtime, status, log-idle age, cwd, preview.
 Status colors: idle=green, busy=yellow, dead=red.
 
 Usage:
@@ -95,7 +95,7 @@ example-host                no         0
 ## tagents status
 
 ```
-Show fleet summary counts: total, busy, idle, dead.
+Show fleet summary counts: total, busy, idle, dead, plus log-idle summary when transcripts are found.
 
 Counts are per-machine when multi-machine scope is used.
 
@@ -110,7 +110,8 @@ Examples:
 
 Sample output:
 ```
-Fleet: 1 total  1 busy  0 idle  0 dead
+MACHINE  TOTAL  BUSY  IDLE  DEAD  LOGS  MAX_LOG_IDLE
+local    1      1     0     0     1     7m12s
 ```
 
 JSON output:
@@ -120,7 +121,9 @@ JSON output:
     "total": 1,
     "busy": 1,
     "idle": 0,
-    "dead": 0
+    "dead": 0,
+    "logStale": 1,
+    "logIdleMax": 432000000000
   }
 }
 ```
@@ -231,29 +234,43 @@ Examples:
 ## tagents wait
 
 ```
-Block until at least one agent from the set becomes idle.
+Block until at least one agent from the set becomes ready.
 
 Accepts one or more agent names (fuzzy-matched). With no agent names and a
-machine scope flag, waits for any idle agent on that machine or fleet.
+machine scope flag, waits for any ready agent on that machine or fleet.
 
 Timeout can be given as a --timeout flag or as the last positional argument
 (e.g. "60s", "2m", "1h"). The positional form is kept for backward compat.
-Default: 60s. Exit 0 when an idle agent is found, exit 1 on timeout.
+Default: 60s. Exit 0 when an agent is ready, exit 1 on timeout.
+
+With --log-idle, a busy-looking agent is also considered ready when its
+Claude/Codex transcript has not advanced for at least the given duration. This
+catches empty-turn/context-wedge stalls that pane-based idle detection misses.
 
 Usage:
   tagents wait [agent ...] [timeout] [flags]
 
 Flags:
-  -t, --timeout duration   Polling timeout (e.g. 60s, 2m, 1h) (default 1m0s)
+      --log-idle duration   Treat an agent as ready when its transcript has been stale for this duration (0 disables)
+  -t, --timeout duration    Polling timeout (e.g. 60s, 2m, 1h) (default 1m0s)
 
 Examples:
   tagents wait my-agent
   tagents wait my-agent 120s
   tagents wait worker-1 worker-2 worker-3
   tagents wait worker-1 worker-2 --timeout 3m
+  tagents wait my-agent --log-idle 90s --timeout 30m
   tagents wait --machine gateway
   tagents wait --all-machines --timeout 5m
 ```
+
+Use `--log-idle` to babysit wedged Claude workers where the pane still looks busy but the JSONL transcript has stopped advancing:
+
+```bash
+tagents wait claude-worker --log-idle 90s --timeout 30m --json
+```
+
+The readiness condition is pane idle **OR** log idle >= threshold. JSON output includes `readyReason`, `logIdle`, and `logIdleFound`.
 
 ---
 

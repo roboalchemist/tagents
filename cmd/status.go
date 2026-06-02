@@ -13,7 +13,7 @@ import (
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Fleet status summary",
-	Long: `Show fleet summary counts: total, busy, idle, dead.
+	Long: `Show fleet summary counts: total, busy, idle, dead, plus log-idle summary when transcripts are found.
 
 Counts are per-machine when multi-machine scope is used.
 

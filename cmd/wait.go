@@ -17,11 +17,11 @@ var flagWaitLogIdle time.Duration
 
 var waitCmd = &cobra.Command{
 	Use:   "wait [agent ...] [timeout]",
-	Short: "Wait until any of the specified agents is idle",
-	Long: `Block until at least one agent from the set becomes idle.
+	Short: "Wait until any of the specified agents is ready",
+	Long: `Block until at least one agent from the set becomes ready.
 
 Accepts one or more agent names (fuzzy-matched). With no agent names and a
-machine scope flag, waits for any idle agent on that machine or fleet.
+machine scope flag, waits for any ready agent on that machine or fleet.
 
 Timeout can be given as a --timeout flag or as the last positional argument
 (e.g. "60s", "2m", "1h"). The positional form is kept for backward compat.
