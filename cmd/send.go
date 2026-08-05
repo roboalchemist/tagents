@@ -3,9 +3,10 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/roboalchemist/tagents/pkg/runtime"
-	"github.com/roboalchemist/tagents/pkg/tmux"
+	"github.com/roboalchemist/tagents/pkg/session"
 	"github.com/spf13/cobra"
 )
 
@@ -56,7 +57,10 @@ func runSend(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("agent is busy (use --force to override)")
 	}
 
-	client := tmux.NewLocalClient()
+	client, err := session.ClientFor(*s, 10*time.Second)
+	if err != nil {
+		return err
+	}
 	if err := client.SendKeys(s.Name, message); err != nil {
 		return fmt.Errorf("sending to %q: %w", s.Name, err)
 	}

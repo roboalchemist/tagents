@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/roboalchemist/tagents/pkg/output"
-	"github.com/roboalchemist/tagents/pkg/tmux"
+	"github.com/roboalchemist/tagents/pkg/session"
 	"github.com/spf13/cobra"
 )
 
@@ -48,7 +49,10 @@ func runRead(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client := tmux.NewLocalClient()
+	client, err := session.ClientFor(*s, 10*time.Second)
+	if err != nil {
+		return err
+	}
 	content, err := client.CapturePane(s.Name, lines)
 	if err != nil {
 		return fmt.Errorf("reading pane for %q: %w", s.Name, err)

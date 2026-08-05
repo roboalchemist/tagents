@@ -3,8 +3,9 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"time"
 
-	"github.com/roboalchemist/tagents/pkg/tmux"
+	"github.com/roboalchemist/tagents/pkg/session"
 	"github.com/spf13/cobra"
 )
 
@@ -60,7 +61,10 @@ func runInject(cmd *cobra.Command, args []string) error {
 	}
 
 	message := "@" + filePath
-	client := tmux.NewLocalClient()
+	client, err := session.ClientFor(*s, 10*time.Second)
+	if err != nil {
+		return err
+	}
 	if err := client.SendKeys(s.Name, message); err != nil {
 		return fmt.Errorf("injecting to %q: %w", s.Name, err)
 	}

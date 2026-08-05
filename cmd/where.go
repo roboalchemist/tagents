@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/roboalchemist/tagents/pkg/output"
-	"github.com/roboalchemist/tagents/pkg/tmux"
+	"github.com/roboalchemist/tagents/pkg/session"
 	"github.com/spf13/cobra"
 )
 
@@ -32,7 +33,10 @@ func runWhere(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client := tmux.NewLocalClient()
+	client, err := session.ClientFor(*s, 10*time.Second)
+	if err != nil {
+		return err
+	}
 	cwd, err := client.GetPaneCWD(s.Name)
 	if err != nil {
 		return fmt.Errorf("getting CWD for %q: %w", s.Name, err)

@@ -3,8 +3,10 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/roboalchemist/tagents/pkg/runtime"
+	"github.com/roboalchemist/tagents/pkg/session"
 	"github.com/roboalchemist/tagents/pkg/tmux"
 	"github.com/spf13/cobra"
 )
@@ -47,7 +49,7 @@ func runBroadcast(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client := tmux.NewLocalClient()
+	clients := make(map[string]*tmux.Client)
 	sent := 0
 	skipped := 0
 
@@ -69,6 +71,17 @@ func runBroadcast(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
+		client, ok := clients[s.Machine]
+		if !ok {
+			var err error
+			client, err = session.ClientFor(s, 10*time.Second)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "warning: skipping %s: %v\n", s.Name, err)
+				skipped++
+				continue
+			}
+			clients[s.Machine] = client
+		}
 		if err := client.SendKeys(s.Name, message); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: failed to send to %s: %v\n", s.Name, err)
 			skipped++

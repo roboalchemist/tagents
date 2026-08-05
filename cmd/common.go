@@ -80,8 +80,19 @@ func formatDuration(d time.Duration) string {
 }
 
 // findSession finds a single session by fuzzy name match using the current scope flags.
+// When no scope flags are given, it tries local sessions first (fast path) and
+// falls back to fleet-wide discovery so remote agents are reachable without
+// --all-machines.
 func findSession(query string) (*session.AgentSession, error) {
 	machine, allMachines := GetMachineScope()
+	if machine == "" && !allMachines {
+		if local, err := session.DiscoverLocal(); err == nil {
+			if s, err := session.FuzzyMatch(local, query); err == nil {
+				return s, nil
+			}
+		}
+		allMachines = true
+	}
 	sessions, err := getSessions(machine, allMachines)
 	if err != nil {
 		return nil, err
