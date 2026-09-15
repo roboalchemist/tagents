@@ -7,6 +7,69 @@ import (
 // DetectRuntime determines the agent runtime from session name and pane content.
 // Heuristics are intentionally simple — false positives prefer "unknown" over wrong guesses.
 func DetectRuntime(sessionName, paneContent string) Runtime {
+	return DetectRuntimeWithProcess(sessionName, paneContent, "", "")
+}
+
+// DetectRuntimeWithProcess determines the agent runtime using process-level
+// signals first, then falling back to session name and pane content heuristics.
+//
+// command is the pane's foreground command (tmux #{pane_current_command}) and
+// title is the pane title (tmux #{pane_title}). These are independent of which
+// text is currently visible in the pane, so they are far more stable than
+// inspecting pane content — an agent that fills the screen with output still
+// reports the same foreground command.
+func DetectRuntimeWithProcess(sessionName, paneContent, command, title string) Runtime {
+	if rt := runtimeFromCommand(command); rt != Unknown {
+		return rt
+	}
+	if rt := runtimeFromTitle(title); rt != Unknown {
+		return rt
+	}
+	return detectRuntimeHeuristic(sessionName, paneContent)
+}
+
+// runtimeFromCommand maps a pane's foreground command to a runtime.
+// Returns Unknown for shells and interpreters, which require further signals.
+func runtimeFromCommand(command string) Runtime {
+	c := strings.ToLower(strings.TrimSpace(command))
+	c = strings.TrimPrefix(c, "-") // login shells report "-zsh"
+	if i := strings.LastIndexByte(c, '/'); i >= 0 {
+		c = c[i+1:]
+	}
+	switch c {
+	case "claude":
+		return Claude
+	case "codex":
+		return Codex
+	case "opencode", "vcodex", "vopencode":
+		return OpenCode
+	case "pi":
+		return Pi
+	}
+	return Unknown
+}
+
+// runtimeFromTitle maps an application-set pane title to a runtime. This covers
+// agents that run under an interpreter (e.g. pi runs as "node") and therefore
+// do not name themselves in pane_current_command.
+func runtimeFromTitle(title string) Runtime {
+	t := strings.TrimSpace(title)
+	if t == "" {
+		return Unknown
+	}
+	lower := strings.ToLower(t)
+	// OpenCode sets the pane title to "OC | <session title>".
+	if lower == "oc" || strings.HasPrefix(lower, "oc |") || strings.HasPrefix(lower, "oc|") {
+		return OpenCode
+	}
+	// Pi sets the pane title to "π - <cwd>" ("<app> - <cwd>" for rebrands).
+	if strings.HasPrefix(t, "π") || lower == "pi" || strings.HasPrefix(lower, "pi -") {
+		return Pi
+	}
+	return Unknown
+}
+
+func detectRuntimeHeuristic(sessionName, paneContent string) Runtime {
 	nameLower := strings.ToLower(sessionName)
 
 	// Name-based: claude sessions often contain 'claude' or 'cc' prefix

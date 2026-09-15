@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/roboalchemist/tagents/pkg/runtime"
 	"github.com/roboalchemist/tagents/pkg/ssh"
 	"github.com/roboalchemist/tagents/pkg/tmux"
 )
@@ -160,6 +161,28 @@ func TestDiscoverOnClient_WithSessions(t *testing.T) {
 	}
 	if sessions[1].Name != "agent-2" {
 		t.Errorf("expected agent-2, got %s", sessions[1].Name)
+	}
+}
+
+func TestDiscoverOnClient_ProcessRuntime(t *testing.T) {
+	mock := newMockExecutor()
+	mock.set(listKey, "oc-agent:1:0:1716000000", nil)
+	// Ambiguous pane content (the OpenCode status bar has scrolled out of view),
+	// but the foreground process still identifies the runtime.
+	mock.set("capture-pane -p -t oc-agent -S -50", "working...\nmore output", nil)
+	mock.set("display-message -p -t oc-agent #{pane_current_path}", "/work", nil)
+	mock.set("display-message -p -t oc-agent #{pane_current_command}\t#{pane_title}", "opencode\tOC | work", nil)
+
+	client := tmux.NewClient(mock)
+	sessions, err := discoverOnClient("", client)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(sessions) != 1 {
+		t.Fatalf("expected 1 session, got %d", len(sessions))
+	}
+	if sessions[0].Runtime != runtime.OpenCode {
+		t.Errorf("expected opencode runtime, got %s", sessions[0].Runtime)
 	}
 }
 

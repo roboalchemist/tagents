@@ -99,10 +99,12 @@ Without a prefix, names are fuzzy-matched (substring): `sim-1` matches `oh-my-si
 
 ## Runtimes Detected
 
-- `claude` — session name contains "claude" (or `cc-`), or pane has `Human:`/`Assistant:` markers
-- `codex` — session name contains "codex"
-- `opencode` — session name contains "opencode" (or `oc-`), or pane shows the OpenCode status bar
-- `pi` — session name contains a `pi` token, or pane shows the pi startup header
+Detection uses the pane's foreground process and title first (stable, independent of which text is visible), then session name and pane content as fallbacks.
+
+- `claude` — foreground command `claude`, or name/content markers
+- `codex` — foreground command `codex`, or name/content markers
+- `opencode` — foreground command `opencode`/`vcodex`/`vopencode`, pane title `OC | ...`, or name/content
+- `pi` — pane title `π - ...` (pi runs as `node`), a `pi` name token, or startup header
 - `unknown` — not detected
 
 ## Output Flags

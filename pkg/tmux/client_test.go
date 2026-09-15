@@ -140,6 +140,48 @@ func TestCapturePane_Error(t *testing.T) {
 	}
 }
 
+func TestGetPaneProcess(t *testing.T) {
+	mock := newMock()
+	mock.set("display-message -p -t my-agent #{pane_current_command}\t#{pane_title}",
+		"opencode\tOC | my task", nil)
+	c := NewClient(mock)
+	command, title, err := c.GetPaneProcess("my-agent")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if command != "opencode" {
+		t.Errorf("command = %q, want opencode", command)
+	}
+	if title != "OC | my task" {
+		t.Errorf("title = %q, want %q", title, "OC | my task")
+	}
+}
+
+func TestGetPaneProcess_EmptyTitle(t *testing.T) {
+	mock := newMock()
+	mock.set("display-message -p -t shell #{pane_current_command}\t#{pane_title}",
+		"zsh\t", nil)
+	c := NewClient(mock)
+	command, title, err := c.GetPaneProcess("shell")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if command != "zsh" || title != "" {
+		t.Errorf("got command=%q title=%q, want zsh/empty", command, title)
+	}
+}
+
+func TestGetPaneProcess_Error(t *testing.T) {
+	mock := newMock()
+	mock.set("display-message -p -t gone #{pane_current_command}\t#{pane_title}",
+		"", fmt.Errorf("exit status 1"))
+	c := NewClient(mock)
+	_, _, err := c.GetPaneProcess("gone")
+	if err == nil {
+		t.Error("expected error for missing session")
+	}
+}
+
 func TestSendKeys(t *testing.T) {
 	mock := newMock()
 	mock.set("send-keys -t my-agent hello Enter", "", nil)

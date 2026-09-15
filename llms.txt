@@ -51,10 +51,13 @@ Use `tagents wait claude-worker --log-idle 90s --timeout 30m --json` to babysit 
 
 ## Runtimes detected
 
-  claude    Session name contains 'claude'/'cc-', or pane has Human:/Assistant: markers
-  codex     Session name contains 'codex'
-  opencode  Session name contains 'opencode'/'oc-', or pane shows the OpenCode status bar
-  pi        Session name has a 'pi' token, or pane shows the pi startup header
+Detection uses the pane's foreground process and title first (stable, independent
+of which text is visible), then session name and pane content as fallbacks.
+
+  claude    Foreground command 'claude', or name/content markers
+  codex     Foreground command 'codex', or name/content markers
+  opencode  Foreground command 'opencode'/'vcodex'/'vopencode', pane title 'OC | ...', or name/content
+  pi        Pane title 'π - ...' (pi runs as 'node'), a 'pi' name token, or startup header
   unknown   Not detected
 
 ## Exit codes

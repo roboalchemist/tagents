@@ -92,6 +92,24 @@ func (c *Client) GetPaneCWD(sessionName string) (string, error) {
 	return strings.TrimSpace(out), nil
 }
 
+// GetPaneProcess returns the foreground command name and terminal title of the
+// session's active pane. These are process-level signals: unlike pane content,
+// they do not depend on which lines happen to be visible or on redraw timing.
+// The title is application-controlled and may be empty.
+func (c *Client) GetPaneProcess(sessionName string) (command, title string, err error) {
+	out, err := c.executor.Run("display-message", "-p", "-t", sessionName,
+		"#{pane_current_command}\t#{pane_title}")
+	if err != nil {
+		return "", "", fmt.Errorf("display-message %s: %w", sessionName, err)
+	}
+	parts := strings.SplitN(out, "\t", 2)
+	command = strings.TrimSpace(parts[0])
+	if len(parts) == 2 {
+		title = strings.TrimSpace(parts[1])
+	}
+	return command, title, nil
+}
+
 // SessionExists returns true if a session with the given name exists.
 func (c *Client) SessionExists(name string) bool {
 	_, err := c.executor.Run("has-session", "-t", name)
