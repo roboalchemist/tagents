@@ -474,3 +474,12 @@ func mustMarshal(t *testing.T, v interface{}) string {
 
 // Ensure must-be-strings are used
 var _ = strings.TrimSpace
+
+func TestFindLogFile_OpenCodeAndPi(t *testing.T) {
+	// OpenCode/Pi log finding is not implemented — should return ""
+	for _, rt := range []Runtime{OpenCode, Pi} {
+		if result := FindLogFile("any-session", rt); result != "" {
+			t.Errorf("expected empty for %s runtime, got %s", rt, result)
+		}
+	}
+}

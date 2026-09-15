@@ -99,8 +99,10 @@ Without a prefix, names are fuzzy-matched (substring): `sim-1` matches `oh-my-si
 
 ## Runtimes Detected
 
-- `claude` — session name contains "claude", or pane has `Human:`/`Assistant:` markers
+- `claude` — session name contains "claude" (or `cc-`), or pane has `Human:`/`Assistant:` markers
 - `codex` — session name contains "codex"
+- `opencode` — session name contains "opencode" (or `oc-`), or pane shows the OpenCode status bar
+- `pi` — session name contains a `pi` token, or pane shows the pi startup header
 - `unknown` — not detected
 
 ## Output Flags

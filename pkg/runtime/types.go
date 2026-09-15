@@ -4,9 +4,11 @@ package runtime
 type Runtime string
 
 const (
-	Claude  Runtime = "claude"
-	Codex   Runtime = "codex"
-	Unknown Runtime = "unknown"
+	Claude   Runtime = "claude"
+	Codex    Runtime = "codex"
+	OpenCode Runtime = "opencode"
+	Pi       Runtime = "pi"
+	Unknown  Runtime = "unknown"
 )
 
 // Status represents the current activity state of an agent.

@@ -35,7 +35,7 @@ Examples:
 }
 
 func init() {
-	broadcastCmd.Flags().StringVar(&flagBroadcastRuntime, "runtime", "", "Filter by runtime: claude or codex")
+	broadcastCmd.Flags().StringVar(&flagBroadcastRuntime, "runtime", "", "Filter by runtime: claude, codex, opencode, or pi")
 	broadcastCmd.Flags().BoolVar(&flagBroadcastDryRun, "dry-run", false, "Show what would be sent without sending")
 	rootCmd.AddCommand(broadcastCmd)
 }

@@ -18,13 +18,33 @@ func DetectRuntime(sessionName, paneContent string) Runtime {
 		return Claude
 	}
 
+	// Name-based: opencode sessions. Checked before codex so a mixed name like
+	// "codex-and-opencode" resolves to opencode.
+	if strings.Contains(nameLower, "opencode") {
+		return OpenCode
+	}
+	if strings.HasPrefix(nameLower, "oc-") || strings.HasSuffix(nameLower, "-oc") {
+		return OpenCode
+	}
+
 	// Name-based: codex sessions
 	if strings.Contains(nameLower, "codex") {
 		return Codex
 	}
 
+	// Name-based: pi sessions. Match "pi" as a whole token only — a plain
+	// substring check would misfire on names like "api" or "pipeline".
+	if hasNameToken(nameLower, "pi") {
+		return Pi
+	}
+
+	// Content-based: OpenCode's persistent status bar is unambiguous.
+	if hasOpenCodeContent(paneContent) {
+		return OpenCode
+	}
+
 	// Content-based: look for Claude Code prompt patterns
-	if hasClaudioContent(paneContent) {
+	if hasClaudeContent(paneContent) {
 		return Claude
 	}
 
@@ -33,10 +53,61 @@ func DetectRuntime(sessionName, paneContent string) Runtime {
 		return Codex
 	}
 
+	// Content-based: pi startup header
+	if hasPiContent(paneContent) {
+		return Pi
+	}
+
 	return Unknown
 }
 
-func hasClaudioContent(content string) bool {
+// hasNameToken reports whether name contains word as a separator-delimited token
+// (e.g. "pi" matches "pi-1" and "my-pi" but not "api" or "pipeline").
+func hasNameToken(nameLower, word string) bool {
+	separators := func(r rune) bool {
+		return r == '-' || r == '_' || r == '.' || r == ' ' || r == '/'
+	}
+	for _, token := range strings.FieldsFunc(nameLower, separators) {
+		if token == word {
+			return true
+		}
+	}
+	return false
+}
+
+func hasOpenCodeContent(content string) bool {
+	patterns := []string{
+		"ctrl+p commands", // OpenCode status bar keybinding hint
+		"• opencode",      // OpenCode status bar branding
+	}
+	contentLower := strings.ToLower(content)
+	for _, p := range patterns {
+		if strings.Contains(contentLower, p) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasPiContent(content string) bool {
+	contentLower := strings.ToLower(content)
+	if strings.Contains(contentLower, "pi can explain its own features") ||
+		strings.Contains(contentLower, "to show full startup help and loaded resources") {
+		return true
+	}
+	// Startup header logo, e.g. "pi v0.85.1" (or "π v..." for rebrands).
+	for _, line := range strings.Split(contentLower, "\n") {
+		line = strings.TrimSpace(line)
+		for _, prefix := range []string{"pi v", "π v"} {
+			if rest, ok := strings.CutPrefix(line, prefix); ok && rest != "" && rest[0] >= '0' && rest[0] <= '9' {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func hasClaudeContent(content string) bool {
 	patterns := []string{
 		"Human:",        // Claude conversation format
 		"Assistant:",    // Claude conversation format

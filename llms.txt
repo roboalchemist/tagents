@@ -13,7 +13,7 @@ No API keys. Uses tmux and SSH from PATH. Reads ~/.ssh/config for machine discov
 - log <agent> [lines] [--raw]: Agent session transcript (Claude Code JSONL parsed, default 100 lines)
 - where <agent>: Agent's current working directory
 - send <agent> <message> [--force]: Send message to agent (warns if busy, --force to override)
-- broadcast <message> [--runtime claude|codex] [--dry-run]: Send to all idle agents
+- broadcast <message> [--runtime claude|codex|opencode|pi] [--dry-run]: Send to all idle agents
 - wait <agent> [timeout] [--log-idle <duration>]: Block until agent is ready (pane-idle OR, when enabled, transcript stale for threshold; default timeout 60s; exit 1 on timeout)
 - inject <agent> <file>: Send @<file> to agent
 - skill print: Print bundled SKILL.md to stdout
@@ -51,9 +51,11 @@ Use `tagents wait claude-worker --log-idle 90s --timeout 30m --json` to babysit 
 
 ## Runtimes detected
 
-  claude   Session name contains 'claude', or pane has Human:/Assistant: markers
-  codex    Session name contains 'codex'
-  unknown  Not detected
+  claude    Session name contains 'claude'/'cc-', or pane has Human:/Assistant: markers
+  codex     Session name contains 'codex'
+  opencode  Session name contains 'opencode'/'oc-', or pane shows the OpenCode status bar
+  pi        Session name has a 'pi' token, or pane shows the pi startup header
+  unknown   Not detected
 
 ## Exit codes
 

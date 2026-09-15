@@ -13,6 +13,14 @@ func TestDetectRuntime_ByName(t *testing.T) {
 		{"claude in name", "my-claude-session", Claude},
 		{"cc prefix", "cc-worker-1", Claude},
 		{"codex in name", "codex-agent", Codex},
+		{"opencode in name", "my-opencode-session", OpenCode},
+		{"oc prefix", "oc-worker-1", OpenCode},
+		{"opencode wins over codex in mixed name", "codex-and-opencode", OpenCode},
+		{"pi token", "pi-1", Pi},
+		{"pi token suffix", "my-pi", Pi},
+		{"pi bare", "pi", Pi},
+		{"pi substring is not a token", "api", Unknown},
+		{"pi substring inside word", "pipeline", Unknown},
 		{"unknown name", "random-session", Unknown},
 		{"empty", "", Unknown},
 	}
@@ -38,6 +46,11 @@ func TestDetectRuntime_ByContent(t *testing.T) {
 		{"claude model name", "session", "Using claude-sonnet-4 model", Claude},
 		{"claude checkmark", "session", "✓ Done\n❯ ", Claude},
 		{"codex content", "session", "openai codex response", Codex},
+		{"opencode status bar", "session", "  Build · haiku[1m]  ctrl+p commands   • OpenCode 1.18.31", OpenCode},
+		{"opencode branding only", "session", "• OpenCode 1.18.31", OpenCode},
+		{"pi startup header", "session", "pi v0.85.1\n/ commands · ! bash", Pi},
+		{"pi rebrand header", "session", "π v0.85.1", Pi},
+		{"pi onboarding text", "session", "Pi can explain its own features and look up its docs.", Pi},
 		{"no markers", "session", "echo hello\n$ ", Unknown},
 	}
 	for _, tt := range tests {

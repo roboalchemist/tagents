@@ -221,7 +221,7 @@ Usage:
 
 Flags:
       --dry-run          Show what would be sent without sending
-      --runtime string   Filter by runtime: claude or codex
+      --runtime string   Filter by runtime: claude, codex, opencode, or pi
 
 Examples:
   tagents broadcast "please continue"
