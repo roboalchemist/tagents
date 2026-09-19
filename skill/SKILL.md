@@ -1,13 +1,15 @@
 ---
 name: tagents
-description: Manage AI agent fleet across tmux sessions and SSH machines. Use when checking agent status, sending messages to agents, reading agent pane output, or managing fleet across multiple machines.
+description: Manage AI agent fleet (Claude Code, Codex, OpenCode, pi) across tmux sessions and SSH machines. Use when checking agent status, sending messages to agents, reading agent pane output, creating new agent sessions, or managing fleet across multiple machines.
 scope: personal
 allowed-tools: Bash(tagents:*)
 ---
 
 # tagents
 
-Manage AI agent fleet without knowing tmux or SSH exists. Discovers sessions in tmux across local and remote SSH machines, reports status, reads output, and sends messages.
+Manage AI agent fleet without knowing tmux or SSH exists. Discovers sessions in tmux across local and remote SSH machines, reports status, reads output, sends messages, and creates new sessions. Works with Claude Code (claude), Codex, OpenCode, and pi harnesses.
+
+Latest release: **0.1.5**. Use `tagents --version` to confirm the installed build (or `brew upgrade tagents` for the newest).
 
 ## Quick Start
 
@@ -24,6 +26,36 @@ tagents wait my-agent --log-idle 90s --timeout 30m  # return if pane-idle OR log
 tagents wait --all-machines --timeout 5m  # fleet mode: any idle agent across all machines
 tagents inject my-agent /tmp/goal.md  # send @/tmp/goal.md
 ```
+
+## Creating Agents
+
+`tagents create <name>` starts a new tmux session and launches an **agent harness** in it. A harness is the agent CLI tagents drives: `opencode` (default), `claude`, `codex`, or `pi`. Select one with `--harness` and optionally pass `--model`.
+
+```bash
+tagents create worker --harness opencode --model 'haiku[1m]' --cwd ~/work
+tagents create review --harness claude --model claude-sonnet-4
+```
+
+`create` can also prepare an isolated git worktree first, so spinning off a worker is a single command:
+
+```bash
+tagents create PROJ-123 \
+  --repo ~/src/example-repo \
+  --worktree ~/src/worktrees/PROJ-123 \
+  --branch dev/proj-123 \
+  --from origin/master \
+  --harness opencode --model 'haiku[1m]' \
+  --prompt "/v/context PROJ-123"
+
+tagents read PROJ-123                          # watch it work
+tagents send PROJ-123 "/v/one-shot PROJ-123"  # guide it
+tagents wait PROJ-123 5m                       # block until idle
+```
+
+- `--prompt <text>` is sent once the harness TUI is ready, so the first message is not dropped.
+- `--command <cmd>` overrides `--harness`/`--model` for a custom launcher (e.g. `vcodex --app`).
+- `--force` replaces an existing session or worktree of the same name; `--dry-run` prints the resolved harness, model, cwd, command, worktree, and branch without creating anything.
+- `create` targets the local machine only. After creating, use `send`/`read`/`wait` to guide and inspect the agent.
 
 ## Examples
 
@@ -98,15 +130,19 @@ Without a prefix, names are fuzzy-matched (substring): `sim-1` matches `oh-my-si
 - `busy` — agent is actively running (yellow)
 - `dead` — pane missing or empty content (red)
 
-## Runtimes Detected
+OpenCode sessions report `idle` when no turn is running (its TUI keeps a status bar instead of a shell prompt, so tagents treats the absence of `esc interrupt` as idle).
 
-Detection uses the pane's foreground process and title first (stable, independent of which text is visible), then session name and pane content as fallbacks.
+## Runtimes (Harnesses) Detected
+
+`tagents` recognizes Claude Code, Codex, OpenCode, and pi sessions. Detection reads the pane's foreground process and title first (stable regardless of which text is visible), then falls back to session name and pane content.
 
 - `claude` — foreground command `claude`, or name/content markers
 - `codex` — foreground command `codex`, or name/content markers
 - `opencode` — foreground command `opencode`/`vcodex`/`vopencode`, pane title `OC | ...`, or name/content
 - `pi` — pane title `π - ...` (pi runs as `node`), a `pi` name token, or startup header
 - `unknown` — not detected
+
+Target a single runtime with `tagents broadcast "<msg>" --runtime opencode` (also `claude`, `codex`, `pi`).
 
 ## Output Flags
 
@@ -129,12 +165,12 @@ All commands accept these global output flags:
 | `list` | List sessions with runtime, status, log-idle age, cwd, preview |
 | `machines` | List SSH hosts with reachability and agent count |
 | `status` | Fleet counts (total/busy/idle/dead plus log transcript summary) |
-| `create <name>` | Create a new agent session (optional worktree + runtime + model + initial prompt) |
+| `create <name>` | Create a new agent session (optional git worktree, `--harness`/`--model`, initial `--prompt`) |
 | `read <agent> [N]` | Last N lines of agent tmux pane (default 50) |
 | `log <agent> [N]` | Session transcript (Claude Code JSONL parsed) |
 | `where <agent>` | Agent's current working directory |
 | `send <agent> <msg>` | Send message (warns if busy; use `--force`) |
-| `broadcast <msg>` | Send to all idle agents |
+| `broadcast <msg> [--runtime R]` | Send to all idle agents; optionally target one runtime (`claude`/`codex`/`opencode`/`pi`) |
 | `wait [agent ...] [timeout]` | Block until any listed agent is ready; pane-idle by default, or pane-idle OR stale transcript with `--log-idle <duration>`; fleet mode with `--machine`/`--all-machines` (default 60s) |
 | `inject <agent> <file>` | Send `@<file>` to agent |
 
