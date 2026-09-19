@@ -63,3 +63,30 @@ func DetectStatus(paneContent string) Status {
 
 	return Busy
 }
+
+// DetectStatusWithRuntime determines status using runtime-aware signals.
+// OpenCode's TUI keeps a status bar as the last visible line, so shell-prompt
+// heuristics never fire; it instead exposes "esc interrupt" only while a turn
+// is running. All other runtimes fall back to DetectStatus.
+func DetectStatusWithRuntime(paneContent string, rt Runtime) Status {
+	if rt == OpenCode {
+		return detectOpenCodeStatus(paneContent)
+	}
+	return DetectStatus(paneContent)
+}
+
+func detectOpenCodeStatus(content string) Status {
+	if strings.TrimSpace(content) == "" {
+		return Dead
+	}
+	lower := strings.ToLower(content)
+	// Only trust the heuristic when the OpenCode TUI is actually on screen.
+	if !strings.Contains(lower, "ctrl+p commands") && !strings.Contains(lower, "• opencode") {
+		return DetectStatus(content)
+	}
+	// "esc interrupt" is shown for the duration of an active turn.
+	if strings.Contains(lower, "esc interrupt") {
+		return Busy
+	}
+	return Idle
+}

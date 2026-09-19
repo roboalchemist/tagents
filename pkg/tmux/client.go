@@ -116,6 +116,27 @@ func (c *Client) SessionExists(name string) bool {
 	return err == nil
 }
 
+// NewSession creates a detached tmux session rooted at cwd. When cwd is empty
+// tmux uses the server's default working directory.
+func (c *Client) NewSession(name, cwd string) error {
+	args := []string{"new-session", "-d", "-s", name}
+	if cwd != "" {
+		args = append(args, "-c", cwd)
+	}
+	if _, err := c.executor.Run(args...); err != nil {
+		return fmt.Errorf("new-session %s: %w", name, err)
+	}
+	return nil
+}
+
+// KillSession terminates a tmux session.
+func (c *Client) KillSession(name string) error {
+	if _, err := c.executor.Run("kill-session", "-t", name); err != nil {
+		return fmt.Errorf("kill-session %s: %w", name, err)
+	}
+	return nil
+}
+
 // IsPaneRunning returns true if the pane has a command currently running (not at a shell prompt).
 // This checks the pane_current_command — if it's the shell itself, the pane is idle.
 func (c *Client) IsPaneRunning(sessionName string) (bool, error) {

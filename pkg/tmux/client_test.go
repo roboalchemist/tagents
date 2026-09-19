@@ -182,6 +182,51 @@ func TestGetPaneProcess_Error(t *testing.T) {
 	}
 }
 
+func TestNewSession(t *testing.T) {
+	mock := newMock()
+	mock.set("new-session -d -s my-agent -c /work/dir", "", nil)
+	c := NewClient(mock)
+	if err := c.NewSession("my-agent", "/work/dir"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestNewSession_NoCWD(t *testing.T) {
+	mock := newMock()
+	mock.set("new-session -d -s my-agent", "", nil)
+	c := NewClient(mock)
+	if err := c.NewSession("my-agent", ""); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestNewSession_Error(t *testing.T) {
+	mock := newMock()
+	mock.set("new-session -d -s dup -c /work", "", fmt.Errorf("duplicate session: dup"))
+	c := NewClient(mock)
+	if err := c.NewSession("dup", "/work"); err == nil {
+		t.Error("expected error for duplicate session")
+	}
+}
+
+func TestKillSession(t *testing.T) {
+	mock := newMock()
+	mock.set("kill-session -t my-agent", "", nil)
+	c := NewClient(mock)
+	if err := c.KillSession("my-agent"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestKillSession_Error(t *testing.T) {
+	mock := newMock()
+	mock.set("kill-session -t gone", "", fmt.Errorf("exit status 1"))
+	c := NewClient(mock)
+	if err := c.KillSession("gone"); err == nil {
+		t.Error("expected error for missing session")
+	}
+}
+
 func TestSendKeys(t *testing.T) {
 	mock := newMock()
 	mock.set("send-keys -t my-agent hello Enter", "", nil)

@@ -29,6 +29,7 @@ Usage:
 Available Commands:
   broadcast   Send message to all idle agents
   completion  Generate shell completion scripts
+  create      Create a new agent session
   docs        Display full documentation
   inject      Send @<file> to an agent
   list        List all agent sessions
@@ -40,6 +41,70 @@ Available Commands:
   status      Fleet status summary
   wait        Wait until agent is ready
   where       Get agent's current working directory
+```
+
+---
+
+## tagents create
+
+```
+Create a new tmux session and launch an agent runtime in it.
+
+By default it launches OpenCode in the current directory. Use --runtime and
+--model to pick a different runtime or model, --cwd to choose the working
+directory, or --repo/--worktree/--branch to create a git worktree first. Pass
+--prompt to send an initial message once the agent is running.
+
+create targets the local machine only. Follow it with tagents send/read/wait to
+guide and inspect the new agent.
+
+Usage:
+  tagents create <name> [flags]
+
+Flags:
+      --branch string     Branch to create for the worktree
+      --command string    Explicit launch command (overrides --runtime/--model)
+      --cwd string        Working directory for the session (default: current directory)
+      --dry-run           Print the plan without changing anything
+      --force             Replace an existing session or worktree of the same name
+      --from string       Start point for the new worktree branch (default "origin/master")
+      --model string      Model to pass to the runtime (e.g. 'haiku[1m]')
+      --prompt string     Initial message to send once the agent is running
+      --repo string       Git repo to create the worktree from
+      --runtime string    Agent runtime: opencode, claude, codex, or pi (default "opencode")
+      --wait duration     Max time to wait for the agent to start (default 20s)
+      --worktree string   Worktree directory to create
+
+Examples:
+  tagents create my-agent
+  tagents create worker --runtime opencode --model 'haiku[1m]' --cwd ~/work
+  tagents create PROJ-123 --repo ~/src/example-repo \
+    --worktree ~/worktrees/PROJ-123 --branch dev/proj-123 \
+    --prompt "/v/one-shot PROJ-123"
+```
+
+### Worktree + agent in one command
+
+`create` can prepare an isolated git worktree and launch the agent inside it, so
+the whole "spin off a worker" flow is one command:
+
+```bash
+tagents create PROJ-123 \
+  --repo ~/src/example-repo \
+  --worktree ~/src/worktrees/PROJ-123 \
+  --branch dev/proj-123 \
+  --from origin/master \
+  --runtime opencode --model 'haiku[1m]' \
+  --prompt "/v/context PROJ-123"
+
+tagents read PROJ-123        # watch it work
+tagents send PROJ-123 "/v/one-shot PROJ-123"   # guide it
+tagents wait PROJ-123 5m     # block until idle
+```
+
+With `--force` an existing session or worktree of the same name is replaced.
+`--dry-run` prints the resolved runtime, model, cwd, command, worktree, and
+branch without creating anything.
 ```
 
 ---

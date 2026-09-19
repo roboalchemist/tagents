@@ -92,7 +92,7 @@ func discoverOnClient(machine string, client *tmux.Client) ([]AgentSession, erro
 		paneContent, _ := client.CapturePane(s.Name, 50)
 		paneCommand, paneTitle, _ := client.GetPaneProcess(s.Name)
 		rt := runtime.DetectRuntimeWithProcess(s.Name, paneContent, paneCommand, paneTitle)
-		status := runtime.DetectStatus(paneContent)
+		status := runtime.DetectStatusWithRuntime(paneContent, rt)
 		cwd, _ := client.GetPaneCWD(s.Name)
 		preview := lastMeaningfulLine(paneContent)
 
