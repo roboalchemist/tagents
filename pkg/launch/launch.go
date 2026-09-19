@@ -1,4 +1,4 @@
-// Package launch builds the shell command line used to start an agent runtime
+// Package launch builds the shell command line used to start an agent harness
 // inside a freshly created tmux session.
 package launch
 
@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// Canonical runtime names accepted by Spec.Runtime.
+// Canonical harness names accepted by Spec.Harness.
 const (
 	OpenCode = "opencode"
 	Claude   = "claude"
@@ -17,9 +17,9 @@ const (
 
 // Spec describes how to launch an agent.
 type Spec struct {
-	Runtime string // opencode | claude | codex | pi; empty defaults to opencode
+	Harness string // opencode | claude | codex | pi; empty defaults to opencode
 	Model   string // optional model id, e.g. "haiku[1m]" or "claude-sonnet-4"
-	Command string // optional explicit command; when set it wins over Runtime/Model
+	Command string // optional explicit command; when set it wins over Harness/Model
 }
 
 // Command returns the shell command line that starts the agent. The line is
@@ -30,7 +30,7 @@ func (s Spec) CommandLine() (string, error) {
 		return cmd, nil
 	}
 
-	rt, err := NormalizeRuntime(s.Runtime)
+	rt, err := NormalizeHarness(s.Harness)
 	if err != nil {
 		return "", err
 	}
@@ -45,13 +45,13 @@ func (s Spec) CommandLine() (string, error) {
 	case Pi:
 		return withModel("pi", s.Model, "--model"), nil
 	}
-	// NormalizeRuntime only returns the four names above, so this is unreachable.
+	// NormalizeHarness only returns the four names above, so this is unreachable.
 	return "", fmt.Errorf("unsupported runtime %q", rt)
 }
 
-// NormalizeRuntime maps a user-supplied runtime name to its canonical form.
+// NormalizeHarness maps a user-supplied harness name to its canonical form.
 // An empty value defaults to opencode. "oc" is accepted as an alias.
-func NormalizeRuntime(r string) (string, error) {
+func NormalizeHarness(r string) (string, error) {
 	switch strings.ToLower(strings.TrimSpace(r)) {
 	case "", OpenCode, "oc":
 		return OpenCode, nil

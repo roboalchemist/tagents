@@ -25,7 +25,7 @@ make install
 ```bash
 tagents list                          # list all local agent sessions
 tagents status                        # fleet summary
-tagents create worker --runtime opencode --model 'haiku[1m]'  # spin off a new agent
+tagents create worker --harness opencode --model 'haiku[1m]'  # spin off a new agent
 tagents read my-agent                 # last 50 lines of agent pane
 tagents send my-agent "continue"      # send message to agent
 tagents wait my-agent 60s             # wait until pane-idle
@@ -40,7 +40,7 @@ tagents wait my-agent --log-idle 90s --timeout 30m  # also return if the log sta
 | `list` | List sessions with runtime, status, log-idle age, cwd, and preview |
 | `machines` | List SSH hosts with reachability and agent count |
 | `status` | Fleet counts (total/busy/idle/dead plus log transcript summary) |
-| `create <name>` | Create a new agent session — optional git worktree, runtime/model selection, and an initial prompt |
+| `create <name>` | Create a new agent session — optional git worktree, harness/model selection, and an initial prompt |
 | `read <agent> [N]` | Last N lines of agent's tmux pane (default 50) |
 | `log <agent> [N]` | Session transcript — Claude Code JSONL parsed (default 100 lines) |
 | `where <agent>` | Agent's current working directory |

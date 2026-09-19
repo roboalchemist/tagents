@@ -15,7 +15,7 @@ Manage AI agent fleet without knowing tmux or SSH exists. Discovers sessions in 
 tagents list                          # list all local agent sessions
 tagents list --all-machines           # include all SSH config machines
 tagents status --json                 # fleet counts in JSON
-tagents create worker --runtime opencode --model 'haiku[1m]' --prompt "/v/one-shot PROJ-123"
+tagents create worker --harness opencode --model 'haiku[1m]' --prompt "/v/one-shot PROJ-123"
 tagents read my-agent                 # last 50 lines of agent pane
 tagents send my-agent "continue"      # send message to agent
 tagents wait my-agent 60s             # wait until pane-idle

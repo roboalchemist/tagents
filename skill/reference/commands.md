@@ -48,10 +48,10 @@ Available Commands:
 ## tagents create
 
 ```
-Create a new tmux session and launch an agent runtime in it.
+Create a new tmux session and launch an agent harness in it.
 
-By default it launches OpenCode in the current directory. Use --runtime and
---model to pick a different runtime or model, --cwd to choose the working
+By default it launches OpenCode in the current directory. Use --harness and
+--model to pick a different harness or model, --cwd to choose the working
 directory, or --repo/--worktree/--branch to create a git worktree first. Pass
 --prompt to send an initial message once the agent is running.
 
@@ -63,21 +63,21 @@ Usage:
 
 Flags:
       --branch string     Branch to create for the worktree
-      --command string    Explicit launch command (overrides --runtime/--model)
+      --command string    Explicit launch command (overrides --harness/--model)
       --cwd string        Working directory for the session (default: current directory)
       --dry-run           Print the plan without changing anything
       --force             Replace an existing session or worktree of the same name
       --from string       Start point for the new worktree branch (default "origin/master")
-      --model string      Model to pass to the runtime (e.g. 'haiku[1m]')
+      --harness string    Agent harness: opencode, claude, codex, or pi (default "opencode")
+      --model string      Model to pass to the harness (e.g. 'haiku[1m]')
       --prompt string     Initial message to send once the agent is running
       --repo string       Git repo to create the worktree from
-      --runtime string    Agent runtime: opencode, claude, codex, or pi (default "opencode")
       --wait duration     Max time to wait for the agent to start (default 20s)
       --worktree string   Worktree directory to create
 
 Examples:
   tagents create my-agent
-  tagents create worker --runtime opencode --model 'haiku[1m]' --cwd ~/work
+  tagents create worker --harness opencode --model 'haiku[1m]' --cwd ~/work
   tagents create PROJ-123 --repo ~/src/example-repo \
     --worktree ~/worktrees/PROJ-123 --branch dev/proj-123 \
     --prompt "/v/one-shot PROJ-123"
@@ -94,7 +94,7 @@ tagents create PROJ-123 \
   --worktree ~/src/worktrees/PROJ-123 \
   --branch dev/proj-123 \
   --from origin/master \
-  --runtime opencode --model 'haiku[1m]' \
+  --harness opencode --model 'haiku[1m]' \
   --prompt "/v/context PROJ-123"
 
 tagents read PROJ-123        # watch it work
@@ -103,7 +103,7 @@ tagents wait PROJ-123 5m     # block until idle
 ```
 
 With `--force` an existing session or worktree of the same name is replaced.
-`--dry-run` prints the resolved runtime, model, cwd, command, worktree, and
+`--dry-run` prints the resolved harness, model, cwd, command, worktree, and
 branch without creating anything.
 ```
 

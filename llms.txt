@@ -9,7 +9,7 @@ No API keys. Uses tmux and SSH from PATH. Reads ~/.ssh/config for machine discov
 - list [--machine <host>] [--all-machines]: List all agent sessions (name, runtime, status, log-idle age, cwd, preview)
 - machines: List SSH-config machines with reachability and agent count
 - status [--machine <host>] [--all-machines]: Fleet summary counts (total/busy/idle/dead plus log-stale/log-idle summary)
-- create <name> [--runtime opencode|claude|codex|pi] [--model M] [--command C] [--cwd DIR] [--prompt MSG] [--repo R --worktree W --branch B] [--from REF] [--wait D] [--force] [--dry-run]: Create a new agent session; optionally create a git worktree first and send an initial prompt (local machine only)
+- create <name> [--harness opencode|claude|codex|pi] [--model M] [--command C] [--cwd DIR] [--prompt MSG] [--repo R --worktree W --branch B] [--from REF] [--wait D] [--force] [--dry-run]: Create a new agent session; optionally create a git worktree first and send an initial prompt (local machine only)
 - read <agent> [lines]: Last N lines of agent's tmux pane (default 50)
 - log <agent> [lines] [--raw]: Agent session transcript (Claude Code JSONL parsed, default 100 lines)
 - where <agent>: Agent's current working directory
@@ -24,14 +24,14 @@ No API keys. Uses tmux and SSH from PATH. Reads ~/.ssh/config for machine discov
 
 ## Creating and guiding agents
 
-`tagents create <name>` starts a new tmux session and launches an agent runtime (default `opencode`). It can also prepare a git worktree and send an initial prompt, so spinning off a worker is one command:
+`tagents create <name>` starts a new tmux session and launches an agent harness (default `opencode`). It can also prepare a git worktree and send an initial prompt, so spinning off a worker is one command:
 
 ```
 tagents create PROJ-123 \
   --repo ~/src/example-repo \
   --worktree ~/worktrees/PROJ-123 \
   --branch dev/proj-123 --from origin/master \
-  --runtime opencode --model 'haiku[1m]' \
+  --harness opencode --model 'haiku[1m]' \
   --prompt "/v/context PROJ-123"
 
 tagents read PROJ-123                          # watch it work

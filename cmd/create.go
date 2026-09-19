@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	flagCreateRuntime  string
+	flagCreateHarness  string
 	flagCreateModel    string
 	flagCreateCommand  string
 	flagCreateCwd      string
@@ -32,10 +32,10 @@ var (
 var createCmd = &cobra.Command{
 	Use:   "create <name>",
 	Short: "Create a new agent session",
-	Long: `Create a new tmux session and launch an agent runtime in it.
+	Long: `Create a new tmux session and launch an agent harness in it.
 
-By default it launches OpenCode in the current directory. Use --runtime and
---model to pick a different runtime or model, --cwd to choose the working
+By default it launches OpenCode in the current directory. Use --harness and
+--model to pick a different harness or model, --cwd to choose the working
 directory, or --repo/--worktree/--branch to create a git worktree first. Pass
 --prompt to send an initial message once the agent is running.
 
@@ -44,12 +44,12 @@ guide and inspect the new agent.
 
 Examples:
   tagents create my-agent
-  tagents create worker --runtime opencode --model 'haiku[1m]' --cwd ~/work
+  tagents create worker --harness opencode --model 'haiku[1m]' --cwd ~/work
   tagents create PROJ-123 --repo ~/src/example-repo \
     --worktree ~/worktrees/PROJ-123 --branch dev/proj-123 \
     --prompt "/v/one-shot PROJ-123"`,
 	Example: `  tagents create my-agent
-  tagents create worker --runtime opencode --model 'haiku[1m]'
+  tagents create worker --harness opencode --model 'haiku[1m]'
   tagents create PROJ-123 --repo ~/src/example-repo \
     --worktree ~/worktrees/PROJ-123 --branch dev/proj-123 \
     --prompt "/v/one-shot PROJ-123"`,
@@ -60,9 +60,9 @@ Examples:
 
 func init() {
 	f := createCmd.Flags()
-	f.StringVar(&flagCreateRuntime, "runtime", "opencode", "Agent runtime: opencode, claude, codex, or pi")
-	f.StringVar(&flagCreateModel, "model", "", "Model to pass to the runtime (e.g. 'haiku[1m]')")
-	f.StringVar(&flagCreateCommand, "command", "", "Explicit launch command (overrides --runtime/--model)")
+	f.StringVar(&flagCreateHarness, "harness", "opencode", "Agent harness: opencode, claude, codex, or pi")
+	f.StringVar(&flagCreateModel, "model", "", "Model to pass to the harness (e.g. 'haiku[1m]')")
+	f.StringVar(&flagCreateCommand, "command", "", "Explicit launch command (overrides --harness/--model)")
 	f.StringVar(&flagCreateCwd, "cwd", "", "Working directory for the session (default: current directory)")
 	f.StringVar(&flagCreatePrompt, "prompt", "", "Initial message to send once the agent is running")
 	f.StringVar(&flagCreateRepo, "repo", "", "Git repo to create the worktree from")
@@ -77,7 +77,7 @@ func init() {
 
 type createResult struct {
 	Name     string `json:"name"`
-	Runtime  string `json:"runtime,omitempty"`
+	Harness  string `json:"harness,omitempty"`
 	Model    string `json:"model,omitempty"`
 	CWD      string `json:"cwd"`
 	Command  string `json:"command"`
@@ -97,7 +97,7 @@ func runCreate(cmd *cobra.Command, args []string) error {
 	}
 
 	launchCmd, err := launch.Spec{
-		Runtime: flagCreateRuntime,
+		Harness: flagCreateHarness,
 		Model:   flagCreateModel,
 		Command: flagCreateCommand,
 	}.CommandLine()
@@ -117,8 +117,8 @@ func runCreate(cmd *cobra.Command, args []string) error {
 		Prompt:  flagCreatePrompt,
 	}
 	if flagCreateCommand == "" {
-		rt, _ := launch.NormalizeRuntime(flagCreateRuntime)
-		res.Runtime = rt
+		rt, _ := launch.NormalizeHarness(flagCreateHarness)
+		res.Harness = rt
 		res.Model = flagCreateModel
 	}
 	if flagCreateWorktree != "" {
@@ -157,7 +157,7 @@ func runCreate(cmd *cobra.Command, args []string) error {
 
 	rt := ""
 	if flagCreateCommand == "" {
-		rt, _ = launch.NormalizeRuntime(flagCreateRuntime)
+		rt, _ = launch.NormalizeHarness(flagCreateHarness)
 	}
 	if err := waitForAgent(client, name, rt, flagCreateWait); err != nil {
 		// The session exists; report but do not tear it down.
@@ -297,7 +297,7 @@ func renderCreateResult(res createResult, dryRun bool) error {
 		prefix = "[dry-run] Would create"
 	}
 	fmt.Printf("%s session %s\n", prefix, res.Name)
-	fmt.Printf("  runtime: %s\n", res.Runtime)
+	fmt.Printf("  harness: %s\n", res.Harness)
 	if res.Model != "" {
 		fmt.Printf("  model:   %s\n", res.Model)
 	}
