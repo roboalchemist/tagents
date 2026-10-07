@@ -15,14 +15,13 @@ linters:
         - fmt.Fprintf
         - (io.Closer).Close
         - (*os.File).Close
-
-issues:
-  exclude-rules:
-    - path: "_test\\.go"
-      linters:
-        - errcheck
-        - ineffassign
-        - staticcheck
-    - linters:
-        - errcheck
-      text: "defer"
+  exclusions:
+    rules:
+      - path: "_test\\.go"
+        linters:
+          - errcheck
+          - ineffassign
+          - staticcheck
+      - linters:
+          - errcheck
+        text: "defer"
