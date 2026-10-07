@@ -1,0 +1,86 @@
+name: Bump Homebrew Tap
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.release.tag_name }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Generate formula
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          BASE="https://github.com/${REPO}/releases/download/${TAG}"
+          curl -fsSL "${BASE}/checksums.txt" -o checksums.txt
+          sha() { awk -v f="$1" '$2 == f {print $1}' checksums.txt; }
+          DA_ARM="$(sha tagents_darwin_arm64.tar.gz)"
+          DA_AMD="$(sha tagents_darwin_amd64.tar.gz)"
+          LX_ARM="$(sha tagents_linux_arm64.tar.gz)"
+          LX_AMD="$(sha tagents_linux_amd64.tar.gz)"
+          for v in "$DA_ARM" "$DA_AMD" "$LX_ARM" "$LX_AMD"; do
+            [ -n "$v" ] || { echo "missing checksum for a platform"; exit 1; }
+          done
+          mkdir -p out/Formula
+          cat > out/Formula/tagents.rb <<EOF
+          class Tagents < Formula
+            desc "Manage a fleet of AI agent sessions running in tmux, locally and over SSH"
+            homepage "https://github.com/${REPO}"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "${BASE}/tagents_darwin_arm64.tar.gz"
+                sha256 "${DA_ARM}"
+              else
+                url "${BASE}/tagents_darwin_amd64.tar.gz"
+                sha256 "${DA_AMD}"
+              end
+            end
+
+            on_linux do
+              if Hardware::CPU.arm?
+                url "${BASE}/tagents_linux_arm64.tar.gz"
+                sha256 "${LX_ARM}"
+              else
+                url "${BASE}/tagents_linux_amd64.tar.gz"
+                sha256 "${LX_AMD}"
+              end
+            end
+
+            def install
+              bin.install "tagents"
+              generate_completions_from_executable(bin/"tagents", "completion")
+            end
+
+            test do
+              assert_match "tagents version", shell_output("#{bin}/tagents --version")
+            end
+          end
+          EOF
+          sed -i 's/^          //' out/Formula/tagents.rb
+      - name: Push to tap
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/roboalchemist/homebrew-tap.git" tap
+          cp out/Formula/tagents.rb tap/Formula/tagents.rb
+          cd tap
+          if git diff --quiet; then
+            echo "formula already up-to-date for ${TAG}"
+          else
+            git add Formula/tagents.rb
+            git commit -m "tagents ${TAG}"
+            git push
+          fi
