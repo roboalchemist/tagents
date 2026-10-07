@@ -16,7 +16,9 @@ var machinesCmd = &cobra.Command{
 	Short: "List available SSH machines",
 	Long: `List all machines available from ~/.ssh/config.
 
-Shows name, reachability, and agent count. Pings each host in parallel.
+Shows name, reachability, agent count, and auth method. Pings each host in parallel.
+Auth is "key" for public-key hosts and "sshpass" for hosts that only accept a
+password (see the "# tagents-sshpass-file" directive and PubkeyAuthentication).
 
 Examples:
   tagents machines
@@ -33,6 +35,16 @@ type machineInfo struct {
 	Name      string `json:"name"`
 	Reachable bool   `json:"reachable"`
 	Agents    int    `json:"agents"`
+	Auth      string `json:"auth"`
+}
+
+// hostAuth reports how tagents authenticates to a host: "sshpass" when a
+// password file is configured/detected, otherwise "key".
+func hostAuth(h ssh.Host) string {
+	if ssh.PasswordFile(h) != "" {
+		return "sshpass"
+	}
+	return "key"
 }
 
 func runMachines(cmd *cobra.Command, args []string) error {
@@ -76,6 +88,7 @@ func runMachines(cmd *cobra.Command, args []string) error {
 			Name:      r.host.Name,
 			Reachable: r.reachable,
 			Agents:    r.agents,
+			Auth:      hostAuth(r.host),
 		})
 	}
 
@@ -83,14 +96,18 @@ func runMachines(cmd *cobra.Command, args []string) error {
 		return output.RenderJSON(machines, opts)
 	}
 
-	headers := []string{"NAME", "REACHABLE", "AGENTS"}
+	headers := []string{"NAME", "REACHABLE", "AGENTS", "AUTH"}
 	rows := make([][]string, 0, len(machines))
 	for _, m := range machines {
 		reachable := "no"
 		if m.Reachable {
 			reachable = "yes"
 		}
-		rows = append(rows, []string{m.Name, reachable, fmt.Sprintf("%d", m.Agents)})
+		auth := m.Auth
+		if auth == "" {
+			auth = "key"
+		}
+		rows = append(rows, []string{m.Name, reachable, fmt.Sprintf("%d", m.Agents), auth})
 	}
 
 	if len(rows) == 0 {

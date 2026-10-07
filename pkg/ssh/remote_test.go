@@ -1,6 +1,8 @@
 package ssh
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -113,6 +115,78 @@ func TestBuildSSHArgs_WithIdentityFile(t *testing.T) {
 			t.Errorf("default port 22 should not add -p flag, got args[%d]=%s", i, args[i+1])
 		}
 	}
+}
+
+func TestBuildSSHArgsAuth_PasswordMode(t *testing.T) {
+	host := Host{
+		Name:         "example-host",
+		HostName:     "am-loaner.local",
+		User:         "user",
+		Port:         "22",
+		IdentityFile: "/home/j/.ssh/id_rsa",
+	}
+	args := buildSSHArgsAuth(host, "tmux ls", true)
+
+	// Must not use BatchMode (it would suppress the password prompt sshpass answers).
+	for _, a := range args {
+		if a == "BatchMode=yes" {
+			t.Errorf("password mode must not set BatchMode: %v", args)
+		}
+		if a == "-i" {
+			t.Errorf("password mode should not pass an identity file: %v", args)
+		}
+	}
+	// Must force password auth and skip public keys.
+	if !containsPair(args, "-o", "PubkeyAuthentication=no") {
+		t.Errorf("expected PubkeyAuthentication=no, got %v", args)
+	}
+	if !containsPair(args, "-o", "PreferredAuthentications=password,keyboard-interactive") {
+		t.Errorf("expected password auth preference, got %v", args)
+	}
+	if args[len(args)-1] != "tmux ls" {
+		t.Errorf("expected command last, got %q", args[len(args)-1])
+	}
+}
+
+func TestPasswordFile_ExplicitDirective(t *testing.T) {
+	host := Host{Name: "example-host", PasswordFile: "/tmp/does-not-need-to-exist"}
+	if got := PasswordFile(host); got != "/tmp/does-not-need-to-exist" {
+		t.Errorf("explicit PasswordFile should be returned as-is, got %q", got)
+	}
+}
+
+func TestPasswordFile_AutoDetect(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	if err := os.MkdirAll(filepath.Join(home, ".ssh"), 0700); err != nil {
+		t.Fatal(err)
+	}
+
+	// No password file on disk yet: no sshpass.
+	if got := PasswordFile(Host{Name: "example-host", PubkeyDisabled: true}); got != "" {
+		t.Errorf("expected no password file when candidate missing, got %q", got)
+	}
+
+	pw := filepath.Join(home, ".ssh", "example-host-pw")
+	if err := os.WriteFile(pw, []byte("secret\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if got := PasswordFile(Host{Name: "example-host", PubkeyDisabled: true}); got != pw {
+		t.Errorf("expected auto-detected %q, got %q", pw, got)
+	}
+	// Key-based host must never pick up sshpass even if a stray file exists.
+	if got := PasswordFile(Host{Name: "example-host"}); got != "" {
+		t.Errorf("key host should not auto-detect sshpass, got %q", got)
+	}
+}
+
+func containsPair(args []string, flag, value string) bool {
+	for i, a := range args {
+		if a == flag && i+1 < len(args) && args[i+1] == value {
+			return true
+		}
+	}
+	return false
 }
 
 func TestRemoteExecutor_PingTimeout(t *testing.T) {

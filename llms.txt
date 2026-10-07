@@ -7,7 +7,7 @@ No API keys. Uses tmux and SSH from PATH. Reads ~/.ssh/config for machine discov
 ## Commands
 
 - list [--machine <host>] [--all-machines]: List all agent sessions (name, runtime, status, log-idle age, cwd, preview)
-- machines: List SSH-config machines with reachability and agent count
+- machines: List SSH-config machines with reachability, agent count, and auth method (`key`/`sshpass`)
 - status [--machine <host>] [--all-machines]: Fleet summary counts (total/busy/idle/dead plus log-stale/log-idle summary)
 - create <name> [--harness opencode|claude|codex|pi] [--model M] [--command C] [--cwd DIR] [--prompt MSG] [--repo R --worktree W --branch B] [--from REF] [--wait D] [--force] [--dry-run]: Create a new agent session; optionally create a git worktree first and send an initial prompt (local machine only)
 - read <agent> [lines]: Last N lines of agent's tmux pane (default 50)
@@ -87,6 +87,14 @@ of which text is visible), then session name and pane content as fallbacks.
   2  Usage error
   3  System error (tmux/ssh unavailable)
 
+## SSH password auth (sshpass)
+
+Hosts with `PubkeyAuthentication no` (MDM-managed Macs) are accessed by wrapping
+`ssh` with `sshpass` (must be on PATH). Password file is taken from a
+`# tagents-sshpass-file <path>` comment in the host block, else auto-detected at
+`~/.ssh/<host>-pw`. Key-based hosts are unaffected. `machines` reports `auth`.
+
 ## Files
 
-  ~/.ssh/config   SSH machine discovery (Host entries, Include supported)
+  ~/.ssh/config   SSH machine discovery (Host entries, Include supported; optional
+                  `# tagents-sshpass-file <path>` password-auth directive)

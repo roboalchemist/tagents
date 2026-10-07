@@ -133,7 +133,9 @@ Examples:
 ```
 List all machines available from ~/.ssh/config.
 
-Shows name, reachability, and agent count. Pings each host in parallel.
+Shows name, reachability, agent count, and auth method. Pings each host in parallel.
+Auth is "key" for public-key hosts and "sshpass" for hosts that only accept a
+password (via the "# tagents-sshpass-file" directive or auto-detected ~/.ssh/<host>-pw).
 
 Usage:
   tagents machines [flags]
@@ -145,14 +147,14 @@ Examples:
 
 Sample output:
 ```
-NAME                REACHABLE  AGENTS
-gateway             yes        7
-mini                yes        2
-server-a             yes        1
-gpu-box             yes        11
-nuc1                yes        3
-iris                yes        32
-example-host                no         0
+NAME                REACHABLE  AGENTS  AUTH
+gateway             yes        7       key
+mini                yes        2       key
+server-a             yes        1       key
+gpu-box             yes        11      key
+nuc1                yes        3       key
+iris                yes        32      key
+example-host                no         0       sshpass
 ```
 
 ---

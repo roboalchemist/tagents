@@ -42,7 +42,18 @@ func parseFile(path string, visited map[string]bool) ([]Host, error) {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "#") {
+			// tagents reads its sshpass password-file mapping from a comment
+			// directive. A real keyword would be rejected by ssh with "Bad
+			// configuration option: ...", so this must stay a comment.
+			if current != nil {
+				if path, ok := parseSshpassComment(line); ok {
+					current.PasswordFile = expandHome(path)
+				}
+			}
 			continue
 		}
 		parts := strings.SplitN(line, " ", 2)
@@ -94,11 +105,11 @@ func parseFile(path string, visited map[string]bool) ([]Host, error) {
 			}
 		case "identityfile":
 			if current != nil {
-				if !filepath.IsAbs(value) && strings.HasPrefix(value, "~") {
-					home, _ := os.UserHomeDir()
-					value = filepath.Join(home, value[2:])
-				}
-				current.IdentityFile = value
+				current.IdentityFile = expandHome(value)
+			}
+		case "pubkeyauthentication":
+			if current != nil && strings.EqualFold(value, "no") {
+				current.PubkeyDisabled = true
 			}
 		}
 	}
@@ -111,4 +122,35 @@ func parseFile(path string, visited map[string]bool) ([]Host, error) {
 
 func isWildcard(name string) bool {
 	return strings.ContainsAny(name, "*?")
+}
+
+// sshpassDirective is the comment keyword carrying an sshpass password-file
+// path inside a Host block, e.g. "# tagents-sshpass-file ~/.ssh/example-host-pw".
+const sshpassDirective = "tagents-sshpass-file"
+
+// parseSshpassComment extracts the path from a comment directive line.
+// It returns ok=false for ordinary comments, so callers can ignore them.
+func parseSshpassComment(line string) (path string, ok bool) {
+	body := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "#"))
+	fields := strings.Fields(body)
+	if len(fields) < 2 || !strings.EqualFold(fields[0], sshpassDirective) {
+		return "", false
+	}
+	return fields[1], true
+}
+
+// expandHome expands a leading ~ or ~/ to the user's home directory. SSH
+// identity/keyboard paths commonly use ~, and tagents invokes sshpass with
+// the path as-is, so it must be resolved before use.
+func expandHome(value string) string {
+	if value == "~" || strings.HasPrefix(value, "~/") {
+		home, err := os.UserHomeDir()
+		if err == nil {
+			if value == "~" {
+				return home
+			}
+			return filepath.Join(home, value[2:])
+		}
+	}
+	return value
 }

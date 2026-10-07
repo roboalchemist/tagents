@@ -9,7 +9,7 @@ allowed-tools: Bash(tagents:*)
 
 Manage AI agent fleet without knowing tmux or SSH exists. Discovers sessions in tmux across local and remote SSH machines, reports status, reads output, sends messages, and creates new sessions. Works with Claude Code (claude), Codex, OpenCode, and pi harnesses.
 
-Latest release: **0.1.5**. Use `tagents --version` to confirm the installed build (or `brew upgrade tagents` for the newest).
+Latest release: **0.1.7**. Use `tagents --version` to confirm the installed build (or `brew upgrade tagents` for the newest).
 
 ## Quick Start
 
@@ -95,14 +95,14 @@ $ tagents list --json
 ]
 
 $ tagents machines
-NAME                REACHABLE  AGENTS
-gateway             yes        7
-mini                yes        2
-server-a             yes        1
-gpu-box             yes        11
-nuc1                yes        3
-iris                yes        32
-example-host                no         0
+NAME                REACHABLE  AGENTS  AUTH
+gateway             yes        7       key
+mini                yes        2       key
+server-a             yes        1       key
+gpu-box             yes        11      key
+nuc1                yes        3       key
+iris                yes        32      key
+example-host                no         0       sshpass
 ```
 
 ## Wait / Babysit Wedged Agents
@@ -123,6 +123,11 @@ By default, only the local machine. Use flags to expand:
 
 Agent names can be pinned to a machine: `gateway:worker` matches exact machine:name.
 Without a prefix, names are fuzzy-matched (substring): `sim-1` matches `oh-my-sim-1`.
+
+Hosts that disable public-key auth (`PubkeyAuthentication no`, e.g. MDM-managed Macs) are
+reached by wrapping `ssh` with `sshpass` (must be on PATH). tagents uses an explicit
+`# tagents-sshpass-file ~/.ssh/<host>-pw` comment in the host block, or auto-detects
+`~/.ssh/<host>-pw`. `tagents machines` shows the method in its `AUTH` column (`key`/`sshpass`).
 
 ## Status Values
 

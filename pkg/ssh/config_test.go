@@ -233,6 +233,60 @@ Host gateway
 	}
 }
 
+func TestParseSSHConfig_SshpassDirective(t *testing.T) {
+	path := writeTempConfig(t, `
+Host example-host
+  HostName AM-Loaner.local
+  User user
+  PubkeyAuthentication no
+  # tagents-sshpass-file ~/.ssh/example-host-pw
+
+Host keyed
+  HostName keyed.example.com
+  # just an ordinary comment
+`)
+	hosts, err := ParseSSHConfig(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(hosts) != 2 {
+		t.Fatalf("expected 2 hosts, got %d", len(hosts))
+	}
+	if !hosts[0].PubkeyDisabled {
+		t.Error("expected example-host PubkeyDisabled=true")
+	}
+	if !strings.HasSuffix(hosts[0].PasswordFile, ".ssh/example-host-pw") {
+		t.Errorf("expected expanded example-host-pw path, got %q", hosts[0].PasswordFile)
+	}
+	if hosts[1].PasswordFile != "" {
+		t.Errorf("ordinary comment must not set PasswordFile, got %q", hosts[1].PasswordFile)
+	}
+	if hosts[1].PubkeyDisabled {
+		t.Error("keyed host should not be PubkeyDisabled")
+	}
+}
+
+func TestParseSshpassComment(t *testing.T) {
+	cases := []struct {
+		line string
+		want string
+		ok   bool
+	}{
+		{"# tagents-sshpass-file ~/.ssh/example-host-pw", "~/.ssh/example-host-pw", true},
+		{"#tagents-sshpass-file /tmp/pw", "/tmp/pw", true},
+		{"  # Tagents-Sshpass-File /tmp/pw  ", "/tmp/pw", true},
+		{"# tagents-sshpass-file", "", false},
+		{"# ordinary comment", "", false},
+		{"PubkeyAuthentication no", "", false},
+	}
+	for _, tc := range cases {
+		got, ok := parseSshpassComment(tc.line)
+		if ok != tc.ok || got != tc.want {
+			t.Errorf("parseSshpassComment(%q) = (%q,%v), want (%q,%v)", tc.line, got, ok, tc.want, tc.ok)
+		}
+	}
+}
+
 func TestIsWildcard(t *testing.T) {
 	cases := []struct {
 		name string

@@ -38,7 +38,7 @@ tagents wait my-agent --log-idle 90s --timeout 30m  # also return if the log sta
 | Command | Description |
 |---------|-------------|
 | `list` | List sessions with runtime, status, log-idle age, cwd, and preview |
-| `machines` | List SSH hosts with reachability and agent count |
+| `machines` | List SSH hosts with reachability, agent count, and auth method (`key`/`sshpass`) |
 | `status` | Fleet counts (total/busy/idle/dead plus log transcript summary) |
 | `create <name>` | Create a new agent session — optional git worktree, harness/model selection, and an initial prompt |
 | `read <agent> [N]` | Last N lines of agent's tmux pane (default 50) |
@@ -74,6 +74,28 @@ tagents status --all-machines --json  # fleet-wide counts as JSON
 ```
 
 All `Host` entries in `~/.ssh/config` (non-wildcard, Include directives supported) are candidates.
+
+## SSH Password Auth (sshpass)
+
+Some hosts (e.g. MDM-managed Macs) disable public-key auth with `PubkeyAuthentication no` and
+only accept a password. tagents detects this and transparently wraps `ssh` with `sshpass`, so
+`--machine`/`--all-machines` work against them too. `sshpass` must be on your PATH.
+
+Password-file resolution, in order:
+
+1. An explicit comment directive in the host's `~/.ssh/config` block (a comment, so `ssh`
+   itself ignores it — a custom keyword would be rejected as a bad configuration option):
+   ```
+   Host example-host
+     HostName Mac.local
+     PubkeyAuthentication no
+     # tagents-sshpass-file ~/.ssh/example-host-pw
+   ```
+2. Otherwise, when the host sets `PubkeyAuthentication no` and `~/.ssh/<host>-pw` exists, that
+   file is used automatically.
+
+Hosts using public keys are unaffected and never invoke `sshpass`. `tagents machines` shows the
+resolved method in its `AUTH` column / `auth` JSON field.
 
 ## Agent Name Matching
 
