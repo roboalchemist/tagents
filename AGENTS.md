@@ -52,5 +52,6 @@ via `-X main.version` (see `Makefile`).
 
 ## References
 
-- `CLAUDE.md` — fuller command table, design decisions, release process (some details lag the code; trust source).
-- `WORKLOG.md`, `GOAL.md` — historical build log and original blueprint.
+- `README.md` — command table and user-facing behavior.
+- `docs/config.md` — configuration reference (`~/.ssh/config` discovery, sshpass).
+- `skill/` — bundled agent skill (`tagents skill print`).

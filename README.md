@@ -1,24 +1,36 @@
 # tagents
 
+[![CI](https://github.com/roboalchemist/tagents/actions/workflows/ci.yml/badge.svg)](https://github.com/roboalchemist/tagents/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/roboalchemist/tagents.svg)](https://pkg.go.dev/github.com/roboalchemist/tagents)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Manage AI agent fleet across tmux sessions and SSH machines.
 
 No API keys required. Uses `tmux` and `ssh` from your PATH. Reads `~/.ssh/config` for machine discovery.
 
 ## Install
 
+### Homebrew
+
 ```bash
-brew tap roboalchemist/tap ssh://git@github.com:2222/roboalchemist/homebrew-tap.git
-brew install tagents
+brew install roboalchemist/tap/tagents
 ```
 
-Or build from source:
+### go install
 
 ```bash
-git clone ssh://git@github.com:2222/roboalchemist/tagents.git
+go install github.com/roboalchemist/tagents@latest
+```
+
+### From source
+
+```bash
+git clone https://github.com/roboalchemist/tagents.git
 cd tagents
-make build
-make install
+make build      # produces ./tagents
 ```
+
+Requires Go 1.24+ and `tmux` on your PATH at runtime.
 
 ## Quick Start
 
@@ -162,17 +174,23 @@ tagents skill print  # print SKILL.md to stdout
 | 2 | Usage error |
 | 3 | System error (tmux/ssh unavailable) |
 
-## Release Setup
+## Releasing
 
-Releases use Gitea Actions with two required secrets in the repo settings:
+Push a version tag and GitHub Actions builds and publishes the release:
 
-| Secret | Purpose |
-|--------|---------|
-| `TAP_TOKEN` | SSH private key or token with push access to `homebrew-tap` tap |
-| `CI_TOKEN` | Gitea token for uploading release assets |
+```bash
+git tag v0.1.8
+git push origin v0.1.8
+```
 
-To publish a release: push a tag (`git tag v0.1.0 && git push origin v0.1.0`). The release workflow builds binaries and the bump-tap workflow updates the Homebrew formula automatically.
+[GoReleaser](.goreleaser.yml) cross-compiles darwin/linux binaries for amd64/arm64,
+generates `checksums.txt`, and attaches everything to the GitHub release. The Homebrew
+formula can then be bumped with the new tag.
 
----
+## Contributing
 
-Report bugs to: https://github.com/roboalchemist/tagents/issues
+See [CONTRIBUTING.md](CONTRIBUTING.md). Security reports: [SECURITY.md](SECURITY.md).
+
+## License
+
+[MIT](LICENSE)

@@ -5,11 +5,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/roboalchemist/tagents/pkg/output"
 	"github.com/roboalchemist/tagents/pkg/runtime"
 	"github.com/roboalchemist/tagents/pkg/session"
 	"github.com/roboalchemist/tagents/pkg/ssh"
-	"github.com/fatih/color"
 )
 
 // getSessions discovers agent sessions based on scope flags.

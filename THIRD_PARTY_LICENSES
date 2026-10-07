@@ -1,0 +1,26 @@
+# Third-Party Licenses
+
+tagents is distributed under the MIT License (see LICENSE). It depends on the
+following Go modules, all of which are distributed under permissive licenses.
+
+| Module | Version | License |
+|---|---|---|
+| github.com/clipperhouse/stringish | v0.1.1 | MIT |
+| github.com/clipperhouse/uax29/v2 | v2.3.0 | MIT |
+| github.com/cpuguy83/go-md2man/v2 | v2.0.6 | MIT |
+| github.com/fatih/color | v1.18.0 | MIT |
+| github.com/google/go-cmp | v0.7.0 | unknown |
+| github.com/inconshreveable/mousetrap | v1.1.0 | Apache License |
+| github.com/itchyny/go-yaml | v0.0.0-20251001235044-fca9a0999f15 | unknown |
+| github.com/itchyny/gojq | v0.12.19 | MIT |
+| github.com/itchyny/timefmt-go | v0.1.8 | MIT |
+| github.com/mattn/go-colorable | v0.1.13 | MIT |
+| github.com/mattn/go-isatty | v0.0.20 | MIT |
+| github.com/mattn/go-runewidth | v0.0.19 | MIT |
+| github.com/olekukonko/tablewriter | v0.0.5 | mit |
+| github.com/russross/blackfriday/v2 | v2.1.0 | see module |
+| github.com/spf13/cobra | v1.9.1 | Apache License |
+| github.com/spf13/pflag | v1.0.6 | mit |
+| golang.org/x/sys | v0.38.0 | mit |
+| gopkg.in/check.v1 | v0.0.0-20161208181325-20d25e280405 | see module |
+| gopkg.in/yaml.v3 | v3.0.1 | MIT |
