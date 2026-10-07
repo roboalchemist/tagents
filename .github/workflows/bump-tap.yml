@@ -1,12 +1,15 @@
 name: Bump Homebrew Tap
 
+# Triggered directly by the tag push (release events created with GITHUB_TOKEN
+# do not trigger other workflows). Waits for the release assets, then publishes
+# the formula to the tap.
 on:
-  release:
-    types: [published]
+  push:
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to publish to the tap (e.g. v0.1.8)"
+        description: "Release tag to publish to the tap (e.g. v0.1.9)"
         required: true
 
 permissions:
@@ -16,15 +19,28 @@ jobs:
   bump:
     runs-on: ubuntu-latest
     env:
-      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
       REPO: ${{ github.repository }}
     steps:
+      - name: Wait for release assets
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/${REPO}/releases/download/${TAG}"
+          for i in $(seq 1 30); do
+            if curl -fsSL "${BASE}/checksums.txt" -o checksums.txt; then
+              echo "release assets available for ${TAG}"
+              exit 0
+            fi
+            echo "waiting for release assets ($i/30)..."
+            sleep 10
+          done
+          echo "release assets for ${TAG} not found" >&2
+          exit 1
       - name: Generate formula
         run: |
           set -euo pipefail
           VERSION="${TAG#v}"
           BASE="https://github.com/${REPO}/releases/download/${TAG}"
-          curl -fsSL "${BASE}/checksums.txt" -o checksums.txt
           sha() { awk -v f="$1" '$2 == f {print $1}' checksums.txt; }
           DA_ARM="$(sha tagents_darwin_arm64.tar.gz)"
           DA_AMD="$(sha tagents_darwin_amd64.tar.gz)"
